@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { IXCChamado } from '../../types/ixc';
 import {
   View,
   Text,
@@ -137,7 +138,7 @@ export default function SuporteScreen() {
             <Button title="Abrir chamado" onPress={() => setShowModal(true)} style={{ marginTop: 4 }} />
           </Card>
         ) : (
-          chamados.map((chamado) => {
+          chamados.map((chamado: IXCChamado) => {
             const { label, color } = chamadoStatus(chamado.status);
             return (
               <Card key={chamado.id} style={styles.chamadoCard}>

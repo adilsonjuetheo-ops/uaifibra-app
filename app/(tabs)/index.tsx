@@ -53,7 +53,7 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  const boletosAbertos = boletos?.filter((b) => b.status === 'A') ?? [];
+  const boletosAbertos = boletos?.filter((b: { status: string }) => b.status === 'A') ?? [];
   const primeiroContrato = contratos?.[0];
 
   async function handleDesbloquear() {

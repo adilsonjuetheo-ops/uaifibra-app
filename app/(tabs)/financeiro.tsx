@@ -115,7 +115,7 @@ export default function FinanceiroScreen() {
     enabled: !!user,
   });
 
-  const filtered = (boletos ?? []).filter((b) => {
+  const filtered = (boletos ?? []).filter((b: IXCBoleto) => {
     if (filter === 'open') return b.status === 'A';
     if (filter === 'paid') return b.status === 'P';
     return true;
@@ -180,7 +180,7 @@ export default function FinanceiroScreen() {
           <Text style={styles.emptyText}>Nenhuma fatura encontrada</Text>
         </Card>
       ) : (
-        filtered.map((boleto) => {
+        filtered.map((boleto: IXCBoleto) => {
           const { label, color } = boletoStatus(boleto.status);
           const isOpen = boleto.status === 'A';
           return (

@@ -9,6 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import { router } from 'expo-router';
+import type { IXCContrato } from '../../types/ixc';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -118,7 +119,7 @@ export default function PerfilScreen() {
       {contratos && contratos.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Meus Contratos</Text>
-          {contratos.map((c) => {
+          {contratos.map((c: IXCContrato) => {
             const { label, color } = contratoStatusInfo(c.status);
             return (
               <Card key={c.id} style={styles.sectionCard}>
