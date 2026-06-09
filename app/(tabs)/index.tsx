@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -108,9 +109,7 @@ export default function Dashboard() {
           <Text style={styles.greeting}>Olá, {firstName} 👋</Text>
           <Text style={styles.greetingSub}>Bem-vindo à UaiFibra</Text>
         </View>
-        <View style={styles.logoSmall}>
-          <Text style={styles.logoText}>U</Text>
-        </View>
+        <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
       </View>
 
       {/* Alerta de boleto aberto */}
@@ -229,11 +228,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { color: Colors.white, fontSize: 22, fontWeight: '900' },
   greetingSub: { color: Colors.textMuted, fontSize: 13, marginTop: 2 },
-  logoSmall: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: Colors.orange, alignItems: 'center', justifyContent: 'center',
-  },
-  logoText: { color: Colors.white, fontWeight: '900', fontSize: 18 },
+  logoSmall: { width: 48, height: 48 },
   alertBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: 'rgba(255,208,0,0.1)',
