@@ -71,7 +71,9 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={styles.logoArea}>
-          <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
+          <View style={styles.logoCircle}>
+            <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="cover" />
+          </View>
           <View style={styles.badge}>
             <View style={styles.badgeDot} />
             <Text style={styles.badgeText}>FIBRA ÓPTICA</Text>
@@ -127,7 +129,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Colors.dark },
   container: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 80, paddingBottom: 40 },
   logoArea: { alignItems: 'center', marginBottom: 32 },
-  logoImg: { width: 120, height: 120, marginBottom: 12 },
+  logoCircle: {
+    width: 140, height: 140, borderRadius: 70,
+    overflow: 'hidden', marginBottom: 12,
+  },
+  logoImg: { width: 140, height: 140 },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
