@@ -1,4 +1,5 @@
 import api from './api';
+import { DEMO_MODE, DEMO_CONTRATOS } from './demo';
 import type { IXCCliente, IXCContrato, IXCApiResponse } from '../types/ixc';
 
 export async function getCliente(idCliente: string): Promise<IXCCliente> {
@@ -8,6 +9,11 @@ export async function getCliente(idCliente: string): Promise<IXCCliente> {
 }
 
 export async function getContratos(idCliente: string): Promise<IXCContrato[]> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 600));
+    return DEMO_CONTRATOS;
+  }
+
   const { data } = await api.get<IXCApiResponse<IXCContrato>>('/contrato', {
     params: {
       qtype: 'contrato.id_cliente',
@@ -23,6 +29,11 @@ export async function getContratos(idCliente: string): Promise<IXCContrato[]> {
 }
 
 export async function solicitarDesbloqueioConfianca(idContrato: string): Promise<string> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 1200));
+    return 'Desbloqueio em confiança concedido! Sua conexão será liberada em instantes.';
+  }
+
   const { data } = await api.post('/desbloqueio_confianca', {
     id_contrato: idContrato,
   });

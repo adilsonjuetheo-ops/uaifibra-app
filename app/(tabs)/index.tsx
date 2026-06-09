@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   View,
   Text,
@@ -13,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
+import { DEMO_MODE } from '../../services/demo';
 import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useAuthStore } from '../../store/authStore';
@@ -94,6 +94,14 @@ export default function Dashboard() {
       }
       showsVerticalScrollIndicator={false}
     >
+      {/* Banner modo demo */}
+      {DEMO_MODE && (
+        <View style={styles.demoBanner}>
+          <Ionicons name="flask-outline" size={14} color="#0d0d0d" />
+          <Text style={styles.demoText}>MODO DEMONSTRAÇÃO — dados fictícios</Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -260,4 +268,10 @@ const styles = StyleSheet.create({
   infoValue: { color: Colors.white, fontSize: 13, fontWeight: '600', flex: 1 },
   separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
   textMuted: { color: Colors.textMuted, textAlign: 'center' },
+  demoBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: Colors.gold, borderRadius: 8,
+    paddingVertical: 6, paddingHorizontal: 12, marginBottom: 16,
+  },
+  demoText: { color: '#0d0d0d', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
 });

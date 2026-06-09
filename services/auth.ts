@@ -1,9 +1,21 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { IXC_BASE_URL } from './api';
+import { DEMO_MODE, DEMO_USER } from './demo';
 import type { IXCLoginResponse } from '../types/ixc';
 
 export async function login(cpf: string, senha: string): Promise<IXCLoginResponse> {
+  if (DEMO_MODE) {
+    // Aceita qualquer CPF com senha = 5 primeiros dígitos do CPF
+    const digits = cpf.replace(/\D/g, '');
+    const expectedPass = digits.slice(0, 5);
+    if (senha !== expectedPass && senha !== '12345') {
+      throw new Error('CPF ou senha inválidos. (Demo: use os 5 primeiros dígitos do CPF)');
+    }
+    await AsyncStorage.setItem('@uaifibra:user', JSON.stringify(DEMO_USER));
+    return DEMO_USER;
+  }
+
   const cpfLimpo = cpf.replace(/\D/g, '');
   const credentials = btoa(`${cpfLimpo}:${senha}`);
 
@@ -47,6 +59,11 @@ export async function alterarSenha(
   senhaAtual: string,
   novaSenha: string
 ): Promise<void> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 800));
+    return;
+  }
+
   const token = await AsyncStorage.getItem('@uaifibra:token');
   await axios.post(
     `${IXC_BASE_URL}/cliente/${idCliente}/alterar_senha`,
