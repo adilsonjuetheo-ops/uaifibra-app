@@ -61,15 +61,15 @@ export default function Dashboard() {
     if (!primeiroContrato) return;
     Alert.alert(
       'Desbloqueio em Confiança',
-      'Deseja solicitar desbloqueio temporário da sua conexão?',
+      'Sua conexão será liberada por 2 dias para que você possa regularizar o pagamento.\n\nApós esse prazo a conexão será bloqueada novamente automaticamente, independente do pagamento.\n\nDeseja solicitar o desbloqueio?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Solicitar',
+          text: 'Solicitar desbloqueio',
           onPress: async () => {
             try {
               const msg = await solicitarDesbloqueioConfianca(primeiroContrato.id);
-              Alert.alert('Sucesso!', msg);
+              Alert.alert('Desbloqueio solicitado!', `${msg}\n\nLembre-se: você tem 2 dias para efetuar o pagamento.`);
             } catch {
               Alert.alert('Erro', 'Não foi possível solicitar o desbloqueio agora.');
             }
@@ -164,10 +164,18 @@ export default function Dashboard() {
             </View>
           </View>
           {(primeiroContrato.status === 'FA' || primeiroContrato.status_internet === 'B') && (
-            <TouchableOpacity style={styles.unlockBtn} onPress={handleDesbloquear} activeOpacity={0.8}>
-              <Ionicons name="lock-open-outline" size={16} color={Colors.white} />
-              <Text style={styles.unlockText}>Desbloqueio em Confiança</Text>
-            </TouchableOpacity>
+            <View style={styles.unlockArea}>
+              <TouchableOpacity style={styles.unlockBtn} onPress={handleDesbloquear} activeOpacity={0.8}>
+                <Ionicons name="lock-open-outline" size={16} color={Colors.white} />
+                <Text style={styles.unlockText}>Desbloqueio em Confiança</Text>
+              </TouchableOpacity>
+              <View style={styles.unlockInfo}>
+                <Ionicons name="time-outline" size={13} color={Colors.textDim} />
+                <Text style={styles.unlockInfoText}>
+                  Válido por <Text style={styles.unlockInfoBold}>2 dias</Text>. Após o prazo a conexão é bloqueada novamente até o pagamento ser confirmado.
+                </Text>
+              </View>
+            </View>
           )}
         </Card>
       ) : (
@@ -248,12 +256,19 @@ const styles = StyleSheet.create({
   speedValue: { color: Colors.white, fontSize: 15, fontWeight: '800' },
   speedLabel: { color: Colors.textMuted, fontSize: 11 },
   speedDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.08)' },
+  unlockArea: { marginTop: 16 },
   unlockBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, marginTop: 16, backgroundColor: Colors.orange,
+    gap: 8, backgroundColor: Colors.orange,
     borderRadius: 10, paddingVertical: 10,
   },
   unlockText: { color: Colors.white, fontWeight: '700', fontSize: 14 },
+  unlockInfo: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginTop: 8, paddingHorizontal: 4,
+  },
+  unlockInfoText: { flex: 1, color: Colors.textDim, fontSize: 11, lineHeight: 16 },
+  unlockInfoBold: { color: Colors.textMuted, fontWeight: '700' },
   loadingCard: { padding: 24, alignItems: 'center', marginBottom: 24 },
   loadingText: { color: Colors.textMuted },
   sectionTitle: { color: Colors.white, fontSize: 16, fontWeight: '800', marginBottom: 14, marginTop: 4 },
