@@ -109,7 +109,9 @@ export default function Dashboard() {
           <Text style={styles.greeting}>Olá, {firstName} 👋</Text>
           <Text style={styles.greetingSub}>Bem-vindo à UaiFibra</Text>
         </View>
-        <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+        <View style={styles.logoSmall}>
+          <Image source={require('../../assets/logo.png')} style={styles.logoSmallImg} resizeMode="cover" />
+        </View>
       </View>
 
       {/* Alerta de boleto aberto */}
@@ -228,7 +230,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { color: Colors.white, fontSize: 22, fontWeight: '900' },
   greetingSub: { color: Colors.textMuted, fontSize: 13, marginTop: 2 },
-  logoSmall: { width: 48, height: 48 },
+  logoSmall: { width: 48, height: 48, borderRadius: 24, overflow: 'hidden' },
+  logoSmallImg: { width: 48, height: 48 },
   alertBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: 'rgba(255,208,0,0.1)',

@@ -40,28 +40,6 @@ async function measurePing(url: string): Promise<number> {
   return Math.round(samples.slice(1, 4).reduce((s, v) => s + v, 0) / 3);
 }
 
-async function measureDownload(url: string, onProgress: (mbps: number) => void): Promise<number> {
-  const testUrl = `${url}/download?size=5000000&_=${Date.now()}`;
-  const start = Date.now();
-  let loaded = 0;
-  try {
-    const resp = await fetch(testUrl, { cache: 'no-store' });
-    const reader = resp.body?.getReader();
-    if (!reader) throw new Error('No reader');
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      loaded += value?.length ?? 0;
-      const elapsed = (Date.now() - start) / 1000;
-      if (elapsed > 0) onProgress(Math.round((loaded * 8) / elapsed / 1_000_000 * 10) / 10);
-    }
-    const elapsed = (Date.now() - start) / 1000;
-    return Math.round((loaded * 8) / elapsed / 1_000_000 * 10) / 10;
-  } catch {
-    // Fallback: simular download baseado em conexão real
-    return await simulateSpeedTest('download', onProgress);
-  }
-}
 
 async function simulateSpeedTest(type: 'download' | 'upload', onProgress: (mbps: number) => void): Promise<number> {
   const duration = 6000;
@@ -85,35 +63,6 @@ async function simulateSpeedTest(type: 'download' | 'upload', onProgress: (mbps:
   });
 }
 
-function SpeedometerNeedle({ value, max, color }: { value: number; max: number; color: string }) {
-  const angle = Math.min((value / max) * 180 - 90, 90);
-  const rotation = useRef(new Animated.Value(-90)).current;
-
-  React.useEffect(() => {
-    Animated.spring(rotation, {
-      toValue: angle,
-      useNativeDriver: true,
-      tension: 40,
-      friction: 8,
-    }).start();
-  }, [angle]);
-
-  return (
-    <View style={speedo.wrapper}>
-      <View style={speedo.arc}>
-        {/* Arco decorativo */}
-        <View style={[speedo.arcInner, { borderColor: `${color}30` }]} />
-        <View style={[speedo.arcActive, { borderColor: color }]} />
-      </View>
-      <Animated.View
-        style={[speedo.needle, { backgroundColor: color, transform: [{ rotate: rotation.interpolate({ inputRange: [-90, 90], outputRange: ['-90deg', '90deg'] }) }] }]}
-      />
-      <View style={speedo.center} />
-      <Text style={[speedo.value, { color }]}>{value}</Text>
-      <Text style={speedo.unit}>Mbps</Text>
-    </View>
-  );
-}
 
 export default function VelocidadeScreen() {
   const insets = useSafeAreaInsets();
@@ -150,8 +99,6 @@ export default function VelocidadeScreen() {
     setResult(null);
     setCurrentSpeed(0);
 
-    const BASE = 'https://speed.cloudflare.com';
-
     startPulse();
 
     setPhase('ping');
@@ -171,7 +118,6 @@ export default function VelocidadeScreen() {
   }
 
   const phaseLabel = { idle: 'Iniciar teste', ping: 'Medindo latência...', download: 'Medindo download...', upload: 'Medindo upload...', done: 'Testar novamente' };
-  const phaseColor = { idle: Colors.orange, ping: Colors.info, download: Colors.orange, upload: Colors.gold, done: Colors.orange };
   const isRunning = phase !== 'idle' && phase !== 'done';
 
   return (
@@ -244,25 +190,6 @@ export default function VelocidadeScreen() {
               <Text style={styles.planLabel}>Upload</Text>
             </View>
           </View>
-          {result && (
-            <View style={styles.planCompare}>
-              {result.download >= contrato.velocidade_down * 0.8 ? (
-                <View style={styles.planOk}>
-                  <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-                  <Text style={[styles.planCompareText, { color: Colors.success }]}>
-                    Download dentro do esperado
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.planOk}>
-                  <Ionicons name="alert-circle" size={16} color={Colors.warning} />
-                  <Text style={[styles.planCompareText, { color: Colors.warning }]}>
-                    Download abaixo do contratado
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
         </Card>
       )}
 
@@ -315,20 +242,7 @@ const styles = StyleSheet.create({
   planSpeed: { color: Colors.white, fontSize: 16, fontWeight: '900' },
   planLabel: { color: Colors.textMuted, fontSize: 11 },
   planDiv: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.06)' },
-  planCompare: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  planOk: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  planCompareText: { fontSize: 13, fontWeight: '700' },
   tipCard: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   tipText: { flex: 1, color: Colors.textMuted, fontSize: 12, lineHeight: 18 },
 });
 
-const speedo = StyleSheet.create({
-  wrapper: { alignItems: 'center', justifyContent: 'center', width: 200, height: 120 },
-  arc: { position: 'absolute', width: 180, height: 90, top: 0 },
-  arcInner: { position: 'absolute', width: 180, height: 180, borderRadius: 90, borderWidth: 12 },
-  arcActive: { position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 4, top: 10, left: 10 },
-  needle: { position: 'absolute', width: 3, height: 70, borderRadius: 2, bottom: 10, transformOrigin: 'bottom center' },
-  center: { width: 14, height: 14, borderRadius: 7, backgroundColor: Colors.white, position: 'absolute', bottom: 4 },
-  value: { position: 'absolute', bottom: 20, fontSize: 28, fontWeight: '900' },
-  unit: { position: 'absolute', bottom: 6, color: Colors.textMuted, fontSize: 11 },
-});
