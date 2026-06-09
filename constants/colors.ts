@@ -1,0 +1,18 @@
+export const Colors = {
+  orange: '#FF6A00',
+  orangeDark: '#C85400',
+  orangeLight: '#FF9040',
+  gold: '#FFD000',
+  dark: '#0d0d0d',
+  dark2: '#150900',
+  dark3: '#1a1a1a',
+  card: '#1e1e1e',
+  cardBorder: 'rgba(255,106,0,0.2)',
+  white: '#ffffff',
+  textMuted: 'rgba(255,255,255,0.65)',
+  textDim: 'rgba(255,255,255,0.35)',
+  success: '#00C851',
+  danger: '#FF4444',
+  warning: '#FFD000',
+  info: '#33B5E5',
+};
