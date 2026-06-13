@@ -91,7 +91,7 @@ async function buscarServidor(rede: NetworkInfo): Promise<TestServer> {
       };
 
       // Prioridade: 1) servidor detectado pelo IP do cliente (serverIpOwner),
-      // 2) servidor da UaiFibra ("UaiFibra Fibra — Berilo"), 3) o mais próximo
+      // 2) servidor da UaiFibra ("UaiFibra Fibra — Buritizeiro"), 3) o mais próximo
       const proximos = (json.servers ?? []).sort(
         (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity)
       );

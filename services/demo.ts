@@ -23,7 +23,7 @@ export function demoSessao(senhaPadrao: boolean): SessaoCliente {
     email: 'teste@uaifibra.com.br',
     telefone: '(38) 99999-9999',
     endereco: 'Rua das Fibras, 100, Centro',
-    cidade: 'Berilo',
+    cidade: 'Buritizeiro',
     senhaPadrao,
   };
 }
