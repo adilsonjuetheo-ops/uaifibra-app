@@ -45,3 +45,19 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Make package public
+        run: |
+          curl -s -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user/packages/container/uaifibra-painel" \
+            -d '{"visibility":"public"}' | jq '.visibility // "public set"'
+
+      - name: Trigger Coolify deploy
+        run: |
+          curl -s -X GET \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            "https://coolify.adilsondev.com.br/api/v1/deploy?uuid=vr2gcsp0fqz3r0u6xgyz64bh&force=true" | \
+            jq '.deployments[0].message // .'
