@@ -1,22 +1,22 @@
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
   ActivityIndicator,
+  Pressable,
   StyleSheet,
+  Text,
   ViewStyle,
-  TextStyle,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+
+import { colors, radius, typography } from '@/constants/theme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
-  textStyle?: TextStyle;
+  icon?: React.ReactNode;
 }
 
 export function Button({
@@ -26,56 +26,58 @@ export function Button({
   loading = false,
   disabled = false,
   style,
-  textStyle,
+  icon,
 }: ButtonProps) {
+  const inactive = disabled || loading;
   return (
-    <TouchableOpacity
-      style={[styles.base, styles[variant], disabled && styles.disabled, style]}
+    <Pressable
       onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
+      disabled={inactive}
+      style={({ pressed }) => [
+        styles.base,
+        styles[variant],
+        pressed && variant === 'primary' && { backgroundColor: colors.primaryDark },
+        pressed && variant !== 'primary' && { opacity: 0.7 },
+        inactive && { opacity: 0.5 },
+        style,
+      ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? Colors.orange : Colors.white} />
+        <ActivityIndicator color={variant === 'primary' ? '#FFF' : colors.primary} />
       ) : (
-        <Text style={[styles.text, styles[`${variant}Text`], textStyle]}>{title}</Text>
+        <>
+          {icon}
+          <Text style={[styles.text, variant === 'ghost' && { color: colors.primary }]}>
+            {title}
+          </Text>
+        </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
-    borderRadius: 26,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: radius.md,
+    minHeight: 50,
   },
-  primary: {
-    backgroundColor: Colors.orange,
+  primary: { backgroundColor: colors.primary },
+  secondary: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: Colors.orange,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: Colors.danger,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
+  danger: { backgroundColor: colors.danger },
+  ghost: { backgroundColor: 'transparent' },
   text: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    color: colors.textPrimary,
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.base,
   },
-  primaryText: { color: Colors.white },
-  outlineText: { color: Colors.orange },
-  ghostText: { color: Colors.textMuted },
-  dangerText: { color: Colors.white },
 });

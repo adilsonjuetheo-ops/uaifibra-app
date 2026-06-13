@@ -1,218 +1,357 @@
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
-  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
-import type { IXCContrato } from '../../types/ixc';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { useAuthStore } from '../../store/authStore';
-import { logout } from '../../services/auth';
-import { getContratos } from '../../services/cliente';
 
-function contratoStatusInfo(status: string) {
-  const map: Record<string, { label: string; color: string }> = {
-    A: { label: 'Ativo', color: Colors.success },
-    I: { label: 'Inativo', color: Colors.textMuted },
-    CA: { label: 'Cancelado', color: Colors.danger },
-    FA: { label: 'Financeiro Bloqueado', color: Colors.warning },
-    AA: { label: 'Aguardando Ativação', color: Colors.info },
-  };
-  return map[status] ?? { label: status, color: Colors.textMuted };
-}
-
-function RowItem({ icon, label, value, onPress, color = Colors.orange }: {
-  icon: string; label: string; value?: string; onPress?: () => void; color?: string;
-}) {
-  const Inner = (
-    <View style={row.container}>
-      <View style={[row.iconBox, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
-      </View>
-      <View style={row.info}>
-        <Text style={row.label}>{label}</Text>
-        {value && <Text style={row.value}>{value}</Text>}
-      </View>
-      {onPress && <Ionicons name="chevron-forward" size={16} color={Colors.textDim} />}
-    </View>
-  );
-  if (onPress) return <TouchableOpacity onPress={onPress} activeOpacity={0.7}>{Inner}</TouchableOpacity>;
-  return Inner;
-}
+import { ContractSelector } from '@/components/ContractSelector';
+import { ProfileField } from '@/components/perfil/ProfileField';
+import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
+import { ENV } from '@/constants/ixcEndpoints';
+import { colors, radius, spacing, typography } from '@/constants/theme';
+import { configurarNotificacoes } from '@/hooks/useNotifications';
+import { STATUS_INTERNET_LABEL } from '@/services/cliente';
+import { useAuthStore } from '@/store/authStore';
+import { contratoAtual, useContractStore } from '@/store/contractStore';
+import { useBiometricStore } from '@/store/biometricStore';
+import { useNotificationStore } from '@/store/notificationStore';
+import { showToast } from '@/store/toastStore';
+import { initials, maskCpf } from '@/utils/format';
 
 export default function PerfilScreen() {
-  const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
-  const clearUser = useAuthStore((s) => s.clearUser);
+  const router = useRouter();
+  const { cliente, logout } = useAuthStore();
+  const { lembretesAtivos, setLembretesAtivos } = useNotificationStore();
+  const { ativa: biometriaAtiva, setAtiva: setBiometriaAtiva } = useBiometricStore();
 
-  const { data: contratos } = useQuery({
-    queryKey: ['contratos', user?.id_cliente],
-    queryFn: () => getContratos(user!.id_cliente),
-    enabled: !!user,
-  });
+  const contractStore = useContractStore();
+  const contrato = contratoAtual(contractStore);
+  const [atualizando, setAtualizando] = useState(false);
 
-  async function handleLogout() {
+  const carregarContratos = contractStore.carregar;
+  const carregar = useCallback(async () => {
+    if (!cliente) return;
+    try {
+      await carregarContratos(cliente.id);
+    } catch {
+      // dados do contrato são complementares — não bloqueia a tela
+    }
+  }, [cliente, carregarContratos]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const refresh = async () => {
+    setAtualizando(true);
+    await carregar();
+    setAtualizando(false);
+  };
+
+  const alternarNotificacoes = async (ativo: boolean) => {
+    if (ativo) {
+      const ok = await configurarNotificacoes();
+      if (!ok) {
+        showToast('Permita as notificações nas configurações do aparelho.', 'error');
+        return;
+      }
+    }
+    await setLembretesAtivos(ativo);
+    showToast(
+      ativo ? 'Lembretes de vencimento ativados.' : 'Lembretes de vencimento desativados.',
+      'success'
+    );
+  };
+
+  const alternarBiometria = async (ativo: boolean) => {
+    if (ativo) {
+      const temHardware = await LocalAuthentication.hasHardwareAsync();
+      const cadastrada = await LocalAuthentication.isEnrolledAsync();
+      if (!temHardware || !cadastrada) {
+        showToast('Cadastre uma digital ou Face ID nas configurações do aparelho.', 'error');
+        return;
+      }
+      const res = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirme sua biometria para ativar',
+        cancelLabel: 'Cancelar',
+      });
+      if (!res.success) return;
+    }
+    await setBiometriaAtiva(ativo);
+    showToast(
+      ativo ? 'Desbloqueio por biometria ativado.' : 'Desbloqueio por biometria desativado.',
+      'success'
+    );
+  };
+
+  const sair = () => {
     Alert.alert('Sair', 'Deseja realmente sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          clearUser();
-          router.replace('/(auth)/login');
-        },
-      },
+      { text: 'Sair', style: 'destructive', onPress: () => void logout() },
     ]);
-  }
+  };
+
+  // Exclusão de conta com dupla confirmação (exigência App Store 5.1.1)
+  const excluirConta = () => {
+    Alert.alert(
+      'Excluir Conta',
+      'Esta ação apaga todos os seus dados deste aparelho e envia à UaiFibra uma solicitação de exclusão dos seus dados pessoais (LGPD).\n\n' +
+        'Atenção: isso não cancela seu contrato de internet — o serviço continua ativo. ' +
+        'Para cancelar o serviço, fale com o atendimento.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Continuar', style: 'destructive', onPress: confirmarExclusao },
+      ]
+    );
+  };
+
+  const confirmarExclusao = () => {
+    Alert.alert(
+      'Confirmar exclusão definitiva',
+      'Tem certeza? Você será desconectado, os dados do app serão apagados e a solicitação de exclusão será aberta no WhatsApp do atendimento. Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir definitivamente',
+          style: 'destructive',
+          onPress: () => void executarExclusao(),
+        },
+      ]
+    );
+  };
+
+  const executarExclusao = async () => {
+    const msg =
+      'Olá! Solicito a EXCLUSÃO dos meus dados pessoais conforme a LGPD. ' +
+      `Nome: ${cliente?.nome ?? ''} — CPF: ${maskCpf(cliente?.cpf)}. ` +
+      'Pedido feito pelo app UaiFibra.';
+    // abre a solicitação no WhatsApp do atendimento antes de desconectar
+    try {
+      await Linking.openURL(
+        `https://wa.me/${ENV.SUPORTE_WHATSAPP}?text=${encodeURIComponent(msg)}`
+      );
+    } catch {
+      // sem WhatsApp instalado: a exclusão local prossegue mesmo assim
+    }
+    await AsyncStorage.clear(); // histórico de testes, preferências, lembretes
+    await logout(); // remove credenciais do SecureStore e volta ao login
+  };
+
+  const sobre = () => {
+    Alert.alert(
+      'Sobre o App',
+      `UaiFibra v${Constants.expoConfig?.version ?? '1.0.0'}\n\nAplicativo do assinante UaiFibra Fibra.`,
+      [
+        {
+          text: 'Política de Privacidade',
+          onPress: () =>
+            void Linking.openURL(
+              'https://adilsonjuetheo-ops.github.io/uaifibra-privacidade/'
+            ),
+        },
+        { text: 'Fechar', style: 'cancel' },
+      ]
+    );
+  };
+
+  const statusContrato = contrato
+    ? (STATUS_INTERNET_LABEL[contrato.status_internet] ?? {
+        label: 'Indisponível',
+        tone: 'neutral' as const,
+      })
+    : null;
+
+  if (!cliente) return null;
 
   return (
     <ScrollView
-      style={styles.root}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-      showsVerticalScrollIndicator={false}
+      style={styles.flex}
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={atualizando}
+          onRefresh={refresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
-      {/* Avatar e nome */}
-      <View style={styles.avatarArea}>
+      {/* Avatar */}
+      <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.nome?.charAt(0).toUpperCase() ?? 'U'}
-          </Text>
+          <Text style={styles.avatarTexto}>{initials(cliente.nome)}</Text>
         </View>
-        <Text style={styles.name}>{user?.nome}</Text>
-        <Text style={styles.cpf}>{user?.cpf_cnpj}</Text>
+        <Text style={styles.nome}>{cliente.nome}</Text>
+        {statusContrato ? (
+          <Badge label={statusContrato.label} tone={statusContrato.tone} />
+        ) : null}
       </View>
 
-      {/* Dados de contato */}
-      <Text style={styles.sectionTitle}>Dados Pessoais</Text>
-      <Card style={styles.sectionCard}>
-        <RowItem icon="person-outline" label="Nome completo" value={user?.nome} />
-        <View style={styles.div} />
-        <RowItem icon="card-outline" label="CPF" value={user?.cpf_cnpj} />
-        <View style={styles.div} />
-        <RowItem
-          icon="mail-outline"
-          label="E-mail"
-          value={user?.email || '—'}
-          onPress={user?.email ? () => Linking.openURL(`mailto:${user.email}`) : undefined}
+      <ContractSelector />
+
+      {/* Dados do cliente */}
+      <Card>
+        <ProfileField icon="card-account-details-outline" label="CPF" value={maskCpf(cliente.cpf)} />
+        <ProfileField icon="email-outline" label="E-mail" value={cliente.email} />
+        <ProfileField icon="phone-outline" label="Telefone" value={cliente.telefone} />
+        <ProfileField icon="map-marker-outline" label="Endereço de instalação" value={cliente.endereco} />
+        <ProfileField
+          icon="wifi"
+          label="Plano contratado"
+          value={contrato?.contrato || 'Carregando...'}
         />
-        <View style={styles.div} />
-        <RowItem
-          icon="call-outline"
-          label="Telefone"
-          value={user?.celular || user?.fone || '—'}
-          onPress={user?.celular ? () => Linking.openURL(`tel:${user.celular}`) : undefined}
-        />
+        <View style={styles.ultimoCampo}>
+          <ProfileField
+            icon="file-sign"
+            label="Status do contrato"
+            value={contrato ? (contrato.status === 'A' ? 'Ativo' : 'Inativo') : '--'}
+          />
+        </View>
       </Card>
 
-      {/* Contratos */}
-      {contratos && contratos.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Meus Contratos</Text>
-          {contratos.map((c: IXCContrato) => {
-            const { label, color } = contratoStatusInfo(c.status);
-            return (
-              <Card key={c.id} style={styles.sectionCard}>
-                <View style={styles.contractRow}>
-                  <Text style={styles.contractPlan}>{c.descricao_plano}</Text>
-                  <View style={[styles.statusPill, { backgroundColor: `${color}20`, borderColor: `${color}50` }]}>
-                    <Text style={[styles.statusPillText, { color }]}>{label}</Text>
-                  </View>
-                </View>
-                <Text style={styles.contractDetail}>
-                  {c.velocidade_down} Mbps down / {c.velocidade_up} Mbps up
-                </Text>
-                <Text style={styles.contractDetail}>
-                  Vencimento: dia {c.dia_vencimento}
-                </Text>
-              </Card>
-            );
-          })}
-        </>
-      )}
+      {/* Configurações */}
+      <Text style={styles.secao}>Configurações</Text>
+      <Card style={{ paddingVertical: 4 }}>
+        <Pressable style={styles.opcao} onPress={() => router.push('/change-password')}>
+          <MaterialCommunityIcons name="lock-reset" size={22} color={colors.primary} />
+          <Text style={styles.opcaoTexto}>Alterar Senha</Text>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+        </Pressable>
 
-      {/* Conta e segurança */}
-      <Text style={styles.sectionTitle}>Conta e Segurança</Text>
-      <Card style={styles.sectionCard}>
-        <RowItem
-          icon="lock-closed-outline"
-          label="Alterar senha"
-          onPress={() => router.push('/(auth)/alterar-senha')}
-        />
-        <View style={styles.div} />
-        <RowItem
-          icon="notifications-outline"
-          label="Notificações"
-          onPress={() => Alert.alert('Em breve', 'Configurações de notificações em breve.')}
-        />
-        <View style={styles.div} />
-        <RowItem
-          icon="shield-checkmark-outline"
-          label="Termos e Privacidade"
-          onPress={() => Alert.alert('Termos', 'Consulte os termos em nosso site.')}
-        />
+        <View style={styles.opcao}>
+          <MaterialCommunityIcons name="bell-ring-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.opcaoTexto}>Notificações</Text>
+            <Text style={styles.opcaoDescricao}>Lembretes de vencimento de fatura</Text>
+          </View>
+          <Switch
+            value={lembretesAtivos}
+            onValueChange={(v) => void alternarNotificacoes(v)}
+            trackColor={{ false: colors.border, true: colors.primaryDark }}
+            thumbColor={lembretesAtivos ? colors.primary : colors.textSecondary}
+          />
+        </View>
+
+        <View style={styles.opcao}>
+          <MaterialCommunityIcons name="fingerprint" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.opcaoTexto}>Desbloqueio por biometria</Text>
+            <Text style={styles.opcaoDescricao}>Exige digital ou Face ID ao abrir o app</Text>
+          </View>
+          <Switch
+            value={biometriaAtiva}
+            onValueChange={(v) => void alternarBiometria(v)}
+            trackColor={{ false: colors.border, true: colors.primaryDark }}
+            thumbColor={biometriaAtiva ? colors.primary : colors.textSecondary}
+          />
+        </View>
+
+        <Pressable style={styles.opcao} onPress={sobre}>
+          <MaterialCommunityIcons name="information-outline" size={22} color={colors.primary} />
+          <Text style={styles.opcaoTexto}>Sobre o App</Text>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+        </Pressable>
+
+        <Pressable style={[styles.opcao, { borderBottomWidth: 0 }]} onPress={excluirConta}>
+          <MaterialCommunityIcons name="account-remove-outline" size={22} color={colors.danger} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.opcaoTexto, { color: colors.danger }]}>Excluir Conta</Text>
+            <Text style={styles.opcaoDescricao}>
+              Apaga seus dados do app e solicita exclusão (LGPD)
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+        </Pressable>
       </Card>
 
-      {/* Botão sair */}
-      <Button
-        title="Sair da conta"
-        onPress={handleLogout}
-        variant="outline"
-        style={styles.logoutBtn}
-        textStyle={{ color: Colors.danger }}
-      />
-
-      <Text style={styles.version}>UaiFibra App v1.0.0</Text>
+      {/* Sair */}
+      <Pressable style={styles.sair} onPress={sair}>
+        <MaterialCommunityIcons name="logout" size={20} color={colors.danger} />
+        <Text style={styles.sairTexto}>Sair</Text>
+      </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.dark },
-  container: { padding: 20, paddingBottom: 40 },
-  avatarArea: { alignItems: 'center', marginBottom: 28 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
+  header: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   avatar: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: Colors.orange, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
+    width: 84,
+    height: 84,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatarText: { color: Colors.white, fontSize: 34, fontWeight: '900' },
-  name: { color: Colors.white, fontSize: 20, fontWeight: '900', marginBottom: 4 },
-  cpf: { color: Colors.textMuted, fontSize: 13 },
-  sectionTitle: { color: Colors.white, fontSize: 15, fontWeight: '800', marginBottom: 10, marginTop: 4 },
-  sectionCard: { marginBottom: 20, padding: 4 },
-  div: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 12 },
-  contractRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  contractPlan: { color: Colors.white, fontSize: 14, fontWeight: '800', flex: 1, marginRight: 8 },
-  contractDetail: { color: Colors.textMuted, fontSize: 12, marginTop: 2 },
-  statusPill: {
-    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1,
+  avatarTexto: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes['2xl'],
+    fontFamily: typography.fontFamily.bold,
   },
-  statusPillText: { fontSize: 11, fontWeight: '700' },
-  logoutBtn: { borderColor: Colors.danger, marginTop: 8, marginBottom: 16 },
-  version: { color: Colors.textDim, textAlign: 'center', fontSize: 12 },
-});
-
-const row = StyleSheet.create({
-  container: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12,
+  nome: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.xl,
+    fontFamily: typography.fontFamily.bold,
+    textAlign: 'center',
   },
-  iconBox: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
+  ultimoCampo: {
+    marginBottom: -12,
   },
-  info: { flex: 1 },
-  label: { color: Colors.textMuted, fontSize: 12, fontWeight: '600' },
-  value: { color: Colors.white, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  secao: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: spacing.sm,
+  },
+  opcao: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  opcaoTexto: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: typography.sizes.base,
+    fontFamily: typography.fontFamily.medium,
+  },
+  opcaoDescricao: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fontFamily.regular,
+  },
+  sair: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  sairTexto: {
+    color: colors.danger,
+    fontSize: typography.sizes.base,
+    fontFamily: typography.fontFamily.semibold,
+  },
 });

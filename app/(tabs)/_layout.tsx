@@ -1,56 +1,75 @@
-import React from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Platform } from 'react-native';
+import React from 'react';
 
-type IoniconName = keyof typeof Ionicons.glyphMap;
-
-interface TabItem {
-  name: string;
-  title: string;
-  icon: IoniconName;
-  iconFocused: IoniconName;
-}
-
-const tabs: TabItem[] = [
-  { name: 'index', title: 'Início', icon: 'home-outline', iconFocused: 'home' },
-  { name: 'financeiro', title: 'Financeiro', icon: 'document-text-outline', iconFocused: 'document-text' },
-  { name: 'velocidade', title: 'Velocidade', icon: 'speedometer-outline', iconFocused: 'speedometer' },
-  { name: 'suporte', title: 'Suporte', icon: 'headset-outline', iconFocused: 'headset' },
-  { name: 'perfil', title: 'Perfil', icon: 'person-outline', iconFocused: 'person' },
-];
+import { colors } from '@/constants/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
+        headerShadowVisible: false,
         tabBarStyle: {
-          backgroundColor: '#111111',
-          borderTopColor: 'rgba(255,106,0,0.15)',
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 84 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-          paddingTop: 8,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 64,
+          paddingTop: 6,
         },
-        tabBarActiveTintColor: Colors.orange,
-        tabBarInactiveTintColor: Colors.textDim,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: { fontFamily: 'Inter_500Medium', fontSize: 11 },
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      {tabs.map(({ name, title, icon, iconFocused }) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{
-            title,
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons name={focused ? iconFocused : icon} size={size} color={color} />
-            ),
-          }}
-        />
-      ))}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Início',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home-variant" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="faturas"
+        options={{
+          title: 'Faturas',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="file-document-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="velocidade"
+        options={{
+          title: 'Velocidade',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="speedometer" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="avisos"
+        options={{
+          title: 'Avisos',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bell-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="perfil"
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

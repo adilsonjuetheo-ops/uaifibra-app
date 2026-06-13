@@ -1,290 +1,385 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  Pressable,
   RefreshControl,
-  Alert,
-  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
-import { DEMO_MODE } from '../../services/demo';
-import { Card } from '../../components/ui/Card';
-import { StatusBadge } from '../../components/StatusBadge';
-import { useAuthStore } from '../../store/authStore';
-import { getContratos } from '../../services/cliente';
-import { getBoletos } from '../../services/financeiro';
-import { solicitarDesbloqueioConfianca } from '../../services/cliente';
 
-function contratoStatusLabel(status: string): { label: string; color: string } {
-  const map: Record<string, { label: string; color: string }> = {
-    A: { label: 'Ativo', color: Colors.success },
-    I: { label: 'Inativo', color: Colors.textMuted },
-    CA: { label: 'Cancelado', color: Colors.danger },
-    CM: { label: 'Cancelado Migrando', color: Colors.danger },
-    FA: { label: 'Financeiro Bloqueado', color: Colors.warning },
-    AA: { label: 'Aguardando Ativação', color: Colors.info },
-  };
-  return map[status] ?? { label: status, color: Colors.textMuted };
-}
+import { ContractSelector } from '@/components/ContractSelector';
+import { DesbloqueioModal } from '@/components/faturas/DesbloqueioModal';
+import { Badge, BadgeTone } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
+import { colors, radius, spacing, typography } from '@/constants/theme';
+import { Aviso, avisosAtivos, buscarAvisos } from '@/services/avisos';
+import { STATUS_INTERNET_LABEL } from '@/services/cliente';
+import { IXCFatura, listarFaturas, proximaFatura, statusFatura } from '@/services/faturas';
+import { friendlyError } from '@/services/ixc';
+import { useAuthStore } from '@/store/authStore';
+import { contratoAtual, useContractStore } from '@/store/contractStore';
+import { daysUntil, formatCurrency, formatDate } from '@/utils/format';
 
-export default function Dashboard() {
+export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+  const cliente = useAuthStore((s) => s.cliente);
 
-  const {
-    data: contratos,
-    isLoading: loadingContratos,
-    refetch,
-    isRefetching,
-  } = useQuery({
-    queryKey: ['contratos', user?.id_cliente],
-    queryFn: () => getContratos(user!.id_cliente),
-    enabled: !!user,
-  });
+  const contractStore = useContractStore();
+  const [faturas, setFaturas] = useState<IXCFatura[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [atualizando, setAtualizando] = useState(false);
+  const [modalDesbloqueio, setModalDesbloqueio] = useState(false);
 
-  const { data: boletos } = useQuery({
-    queryKey: ['boletos', user?.id_cliente],
-    queryFn: () => getBoletos(user!.id_cliente),
-    enabled: !!user,
-  });
+  const carregarContratos = contractStore.carregar;
+  const carregar = useCallback(async () => {
+    if (!cliente) return;
+    setErro(null);
+    try {
+      const [, fts, avs] = await Promise.all([
+        carregarContratos(cliente.id),
+        listarFaturas(cliente.id),
+        buscarAvisos(),
+      ]);
+      setFaturas(fts);
+      setAvisos(avisosAtivos(avs, cliente.cidade));
+    } catch (error) {
+      setErro(friendlyError(error));
+    }
+  }, [cliente, carregarContratos]);
 
-  const boletosAbertos = boletos?.filter((b: { status: string }) => b.status === 'A') ?? [];
-  const primeiroContrato = contratos?.[0];
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
-  async function handleDesbloquear() {
-    if (!primeiroContrato) return;
-    Alert.alert(
-      'Desbloqueio em Confiança',
-      'Sua conexão será liberada por 2 dias para que você possa regularizar o pagamento.\n\nApós esse prazo a conexão será bloqueada novamente automaticamente, independente do pagamento.\n\nDeseja solicitar o desbloqueio?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Solicitar desbloqueio',
-          onPress: async () => {
-            try {
-              const msg = await solicitarDesbloqueioConfianca(primeiroContrato.id);
-              Alert.alert('Desbloqueio solicitado!', `${msg}\n\nLembre-se: você tem 2 dias para efetuar o pagamento.`);
-            } catch {
-              Alert.alert('Erro', 'Não foi possível solicitar o desbloqueio agora.');
-            }
-          },
-        },
-      ]
-    );
-  }
+  const refresh = async () => {
+    setAtualizando(true);
+    await carregar();
+    setAtualizando(false);
+  };
 
-  const firstName = user?.nome?.split(' ')[0] ?? 'Cliente';
+  const contrato = contratoAtual(contractStore);
+  const statusConexao = contrato
+    ? (STATUS_INTERNET_LABEL[contrato.status_internet] ?? {
+        label: 'Status desconhecido',
+        tone: 'warning' as const,
+      })
+    : null;
+  const bloqueado =
+    !!contrato && ['CM', 'CA', 'FA', 'D'].includes(contrato.status_internet);
+
+  const fatura = proximaFatura(faturas);
+  const dias = fatura ? daysUntil(fatura.data_vencimento) : 0;
+  const faturaVencida = fatura ? statusFatura(fatura) === 'vencida' : false;
+  const badgeFatura: { label: string; tone: BadgeTone } = faturaVencida
+    ? { label: `Vencida há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`, tone: 'danger' }
+    : dias === 0
+      ? { label: 'Vence hoje', tone: 'warning' }
+      : { label: `Vence em ${dias} dia${dias === 1 ? '' : 's'}`, tone: dias <= 3 ? 'warning' : 'info' };
+
+  const primeiroNome = cliente?.nome.split(' ')[0] ?? '';
 
   return (
     <ScrollView
-      style={styles.root}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
+      style={styles.flex}
+      contentContainerStyle={[
+        styles.container,
+        { paddingTop: insets.top + spacing.md },
+      ]}
       refreshControl={
         <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={refetch}
-          tintColor={Colors.orange}
-          colors={[Colors.orange]}
+          refreshing={atualizando}
+          onRefresh={refresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
-      showsVerticalScrollIndicator={false}
     >
-      {/* Banner modo demo */}
-      {DEMO_MODE && (
-        <View style={styles.demoBanner}>
-          <Ionicons name="flask-outline" size={14} color="#0d0d0d" />
-          <Text style={styles.demoText}>MODO DEMONSTRAÇÃO — dados fictícios</Text>
+      <Text style={styles.saudacao}>Olá, {primeiroNome} 👋</Text>
+      <Text style={styles.subtitulo}>Bem-vindo de volta à UaiFibra</Text>
+
+      <ContractSelector />
+
+      {erro ? (
+        <Card style={styles.cardErro}>
+          <MaterialCommunityIcons name="wifi-off" size={22} color={colors.danger} />
+          <Text style={styles.erroTexto}>{erro}</Text>
+          <Pressable onPress={() => void carregar()}>
+            <Text style={styles.tentarNovamente}>Tentar novamente</Text>
+          </Pressable>
+        </Card>
+      ) : null}
+
+      {/* Status da conexão */}
+      <Card elevated style={styles.cardStatus}>
+        <View
+          style={[
+            styles.statusDot,
+            {
+              backgroundColor: statusConexao
+                ? statusConexao.tone === 'success'
+                  ? colors.success
+                  : statusConexao.tone === 'warning'
+                    ? colors.warning
+                    : colors.danger
+                : colors.textSecondary,
+            },
+          ]}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.statusLabel}>Status da conexão</Text>
+          <Text style={styles.statusValor}>
+            {statusConexao?.label ?? 'Carregando...'}
+          </Text>
         </View>
+        <MaterialCommunityIcons
+          name={bloqueado ? 'wifi-off' : 'wifi'}
+          size={28}
+          color={bloqueado ? colors.danger : colors.primary}
+        />
+      </Card>
+
+      {/* Próxima fatura */}
+      {fatura ? (
+        <Card style={{ gap: spacing.sm }}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitulo}>Próxima fatura</Text>
+            <Badge label={badgeFatura.label} tone={badgeFatura.tone} />
+          </View>
+          <Text style={styles.faturaValor}>{formatCurrency(fatura.valor)}</Text>
+          <Text style={styles.faturaVencimento}>
+            Vencimento: {formatDate(fatura.data_vencimento)}
+          </Text>
+        </Card>
+      ) : (
+        <Card style={{ alignItems: 'center', gap: 8 }}>
+          <MaterialCommunityIcons name="check-decagram" size={32} color={colors.primary} />
+          <Text style={styles.semFatura}>Nenhuma fatura em aberto. Tudo em dia! 🎉</Text>
+        </Card>
       )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Olá, {firstName} 👋</Text>
-          <Text style={styles.greetingSub}>Bem-vindo à UaiFibra</Text>
-        </View>
-        <View style={styles.logoSmall}>
-          <Image source={require('../../assets/logo.png')} style={styles.logoSmallImg} resizeMode="cover" />
-        </View>
+      {/* Ações rápidas */}
+      <View style={styles.acoes}>
+        <Pressable
+          style={styles.acao}
+          onPress={() =>
+            fatura ? router.push(`/fatura/${fatura.id}`) : router.push('/(tabs)/faturas')
+          }
+        >
+          <View style={styles.acaoIcone}>
+            <MaterialCommunityIcons name="barcode-scan" size={26} color={colors.primary} />
+          </View>
+          <Text style={styles.acaoTexto}>Pagar Fatura</Text>
+        </Pressable>
+
+        <Pressable style={styles.acao} onPress={() => setModalDesbloqueio(true)}>
+          <View style={styles.acaoIcone}>
+            <MaterialCommunityIcons name="lock-open-outline" size={26} color={colors.primary} />
+          </View>
+          <Text style={styles.acaoTexto}>Desbloquear em Confiança</Text>
+        </Pressable>
       </View>
 
-      {/* Alerta de boleto aberto */}
-      {boletosAbertos.length > 0 && (
-        <TouchableOpacity
-          style={styles.alertBanner}
-          onPress={() => router.push('/(tabs)/financeiro')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="warning-outline" size={20} color={Colors.warning} />
-          <Text style={styles.alertText}>
-            Você tem {boletosAbertos.length} fatura{boletosAbertos.length > 1 ? 's' : ''} em aberto
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.warning} />
-        </TouchableOpacity>
-      )}
-
-      {/* Contrato principal */}
-      {loadingContratos ? (
-        <Card style={styles.loadingCard}>
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </Card>
-      ) : primeiroContrato ? (
-        <Card highlight style={styles.contractCard}>
-          <View style={styles.contractHeader}>
-            <Text style={styles.contractTitle}>Meu Plano</Text>
-            <StatusBadge
-              label={contratoStatusLabel(primeiroContrato.status).label}
-              color={contratoStatusLabel(primeiroContrato.status).color}
-            />
-          </View>
-          <Text style={styles.planName}>{primeiroContrato.descricao_plano}</Text>
-          <View style={styles.speedRow}>
-            <View style={styles.speedItem}>
-              <Ionicons name="arrow-down-circle" size={20} color={Colors.orange} />
-              <Text style={styles.speedValue}>{primeiroContrato.velocidade_down} Mbps</Text>
-              <Text style={styles.speedLabel}>Download</Text>
-            </View>
-            <View style={styles.speedDivider} />
-            <View style={styles.speedItem}>
-              <Ionicons name="arrow-up-circle" size={20} color={Colors.gold} />
-              <Text style={styles.speedValue}>{primeiroContrato.velocidade_up} Mbps</Text>
-              <Text style={styles.speedLabel}>Upload</Text>
-            </View>
-            <View style={styles.speedDivider} />
-            <View style={styles.speedItem}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.textMuted} />
-              <Text style={styles.speedValue}>Dia {primeiroContrato.dia_vencimento}</Text>
-              <Text style={styles.speedLabel}>Vencimento</Text>
-            </View>
-          </View>
-          {(primeiroContrato.status === 'FA' || primeiroContrato.status_internet === 'B') && (
-            <View style={styles.unlockArea}>
-              <TouchableOpacity style={styles.unlockBtn} onPress={handleDesbloquear} activeOpacity={0.8}>
-                <Ionicons name="lock-open-outline" size={16} color={Colors.white} />
-                <Text style={styles.unlockText}>Desbloqueio em Confiança</Text>
-              </TouchableOpacity>
-              <View style={styles.unlockInfo}>
-                <Ionicons name="time-outline" size={13} color={Colors.textDim} />
-                <Text style={styles.unlockInfoText}>
-                  Válido por <Text style={styles.unlockInfoBold}>2 dias</Text>. Após o prazo a conexão é bloqueada novamente até o pagamento ser confirmado.
+      {/* Plano contratado */}
+      <Card style={{ gap: spacing.sm }}>
+        <Text style={styles.cardTitulo}>Seu plano</Text>
+        {contrato ? (
+          <>
+            <Text style={styles.planoNome}>{contrato.contrato || 'Plano contratado'}</Text>
+            <View style={styles.planoRow}>
+              <View style={styles.planoItem}>
+                <MaterialCommunityIcons name="download" size={20} color={colors.primary} />
+                <Text style={styles.planoLabel}>Download</Text>
+              </View>
+              <View style={styles.planoItem}>
+                <MaterialCommunityIcons name="upload" size={20} color={colors.primaryLight} />
+                <Text style={styles.planoLabel}>Upload</Text>
+              </View>
+              <View style={styles.planoItem}>
+                <MaterialCommunityIcons
+                  name="calendar-check"
+                  size={20}
+                  color={colors.info}
+                />
+                <Text style={styles.planoLabel}>
+                  Ativo desde {formatDate(contrato.data_ativacao)}
                 </Text>
               </View>
             </View>
-          )}
-        </Card>
+          </>
+        ) : (
+          <Text style={styles.semFatura}>Nenhum contrato encontrado.</Text>
+        )}
+      </Card>
+
+      {/* Avisos do provedor (mural); sem aviso ativo, mostra a dica padrão */}
+      {avisos.length > 0 ? (
+        <Pressable onPress={() => router.push('/avisos' as Parameters<typeof router.push>[0])}>
+          <Card style={styles.avisos}>
+            <MaterialCommunityIcons
+              name={avisos[0].tipo === 'info' ? 'bell-ring-outline' : 'alert-circle-outline'}
+              size={20}
+              color={avisos[0].tipo === 'urgente' ? colors.danger : avisos[0].tipo === 'manutencao' ? colors.warning : colors.info}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.avisoTitulo}>{avisos[0].titulo}</Text>
+              <Text style={styles.avisoTexto} numberOfLines={2}>
+                {avisos[0].mensagem}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
+          </Card>
+        </Pressable>
       ) : (
-        <Card>
-          <Text style={styles.textMuted}>Nenhum contrato encontrado.</Text>
+        <Card style={styles.avisos}>
+          <MaterialCommunityIcons name="bell-outline" size={20} color={colors.textSecondary} />
+          <Text style={styles.avisoTexto}>
+            {faturaVencida
+              ? 'Você possui fatura vencida. Pague agora para evitar bloqueio do acesso.'
+              : 'Pague suas faturas pelo app com PIX e tenha a liberação em até 1 hora.'}
+          </Text>
         </Card>
       )}
 
-      {/* Atalhos rápidos */}
-      <Text style={styles.sectionTitle}>Acesso Rápido</Text>
-      <View style={styles.shortcuts}>
-        {[
-          { icon: 'document-text-outline', label: 'Faturas', route: '/(tabs)/financeiro', color: Colors.orange },
-          { icon: 'speedometer-outline', label: 'Velocidade', route: '/(tabs)/velocidade', color: Colors.gold },
-          { icon: 'headset-outline', label: 'Suporte', route: '/(tabs)/suporte', color: Colors.info },
-          { icon: 'person-outline', label: 'Perfil', route: '/(tabs)/perfil', color: Colors.success },
-        ].map(({ icon, label, route, color }) => (
-          <TouchableOpacity
-            key={label}
-            style={styles.shortcut}
-            onPress={() => router.push(route as any)}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.shortcutIcon, { backgroundColor: `${color}18` }]}>
-              <Ionicons name={icon as any} size={26} color={color} />
-            </View>
-            <Text style={styles.shortcutLabel}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Informações do cliente */}
-      <Text style={styles.sectionTitle}>Meus Dados</Text>
-      <Card>
-        <View style={styles.infoRow}>
-          <Ionicons name="person-circle-outline" size={18} color={Colors.orange} />
-          <Text style={styles.infoLabel}>Nome</Text>
-          <Text style={styles.infoValue}>{user?.nome}</Text>
-        </View>
-        <View style={styles.separator} />
-        <View style={styles.infoRow}>
-          <Ionicons name="card-outline" size={18} color={Colors.orange} />
-          <Text style={styles.infoLabel}>CPF</Text>
-          <Text style={styles.infoValue}>{user?.cpf_cnpj}</Text>
-        </View>
-        <View style={styles.separator} />
-        <View style={styles.infoRow}>
-          <Ionicons name="call-outline" size={18} color={Colors.orange} />
-          <Text style={styles.infoLabel}>Celular</Text>
-          <Text style={styles.infoValue}>{user?.celular || user?.fone || '—'}</Text>
-        </View>
-      </Card>
+      <DesbloqueioModal
+        visible={modalDesbloqueio}
+        onClose={() => setModalDesbloqueio(false)}
+        onSuccess={() => void carregar()}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.dark },
-  container: { padding: 20, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  greeting: { color: Colors.white, fontSize: 22, fontWeight: '900' },
-  greetingSub: { color: Colors.textMuted, fontSize: 13, marginTop: 2 },
-  logoSmall: { width: 48, height: 48, borderRadius: 24, overflow: 'hidden' },
-  logoSmallImg: { width: 48, height: 48 },
-  alertBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: 'rgba(255,208,0,0.1)',
-    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,208,0,0.3)',
-    padding: 14, marginBottom: 16,
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
+  saudacao: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes['2xl'],
+    fontFamily: typography.fontFamily.bold,
   },
-  alertText: { flex: 1, color: Colors.warning, fontSize: 14, fontWeight: '600' },
-  contractCard: { marginBottom: 24 },
-  contractHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  contractTitle: { color: Colors.textMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  planName: { color: Colors.white, fontSize: 20, fontWeight: '900', marginBottom: 16 },
-  speedRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  speedItem: { alignItems: 'center', gap: 4 },
-  speedValue: { color: Colors.white, fontSize: 15, fontWeight: '800' },
-  speedLabel: { color: Colors.textMuted, fontSize: 11 },
-  speedDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.08)' },
-  unlockArea: { marginTop: 16 },
-  unlockBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: Colors.orange,
-    borderRadius: 10, paddingVertical: 10,
+  subtitulo: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
+    marginTop: -spacing.sm,
   },
-  unlockText: { color: Colors.white, fontWeight: '700', fontSize: 14 },
-  unlockInfo: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    marginTop: 8, paddingHorizontal: 4,
+  cardErro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderColor: colors.danger,
   },
-  unlockInfoText: { flex: 1, color: Colors.textDim, fontSize: 11, lineHeight: 16 },
-  unlockInfoBold: { color: Colors.textMuted, fontWeight: '700' },
-  loadingCard: { padding: 24, alignItems: 'center', marginBottom: 24 },
-  loadingText: { color: Colors.textMuted },
-  sectionTitle: { color: Colors.white, fontSize: 16, fontWeight: '800', marginBottom: 14, marginTop: 4 },
-  shortcuts: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
-  shortcut: { alignItems: 'center', gap: 8, flex: 1 },
-  shortcutIcon: { width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  shortcutLabel: { color: Colors.textMuted, fontSize: 12, fontWeight: '600' },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
-  infoLabel: { color: Colors.textMuted, fontSize: 13, width: 60 },
-  infoValue: { color: Colors.white, fontSize: 13, fontWeight: '600', flex: 1 },
-  separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
-  textMuted: { color: Colors.textMuted, textAlign: 'center' },
-  demoBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: Colors.gold, borderRadius: 8,
-    paddingVertical: 6, paddingHorizontal: 12, marginBottom: 16,
+  erroTexto: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
   },
-  demoText: { color: '#0d0d0d', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  tentarNovamente: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.semibold,
+  },
+  cardStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statusDot: { width: 12, height: 12, borderRadius: 6 },
+  statusLabel: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fontFamily.regular,
+  },
+  statusValor: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.lg,
+    fontFamily: typography.fontFamily.semibold,
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitulo: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.medium,
+  },
+  faturaValor: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes['3xl'],
+    fontFamily: typography.fontFamily.bold,
+  },
+  faturaVencimento: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
+  },
+  semFatura: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
+    textAlign: 'center',
+  },
+  acoes: { flexDirection: 'row', gap: spacing.md },
+  acao: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: 10,
+  },
+  acaoIcone: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0, 166, 81, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acaoTexto: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.semibold,
+    textAlign: 'center',
+  },
+  planoNome: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.lg,
+    fontFamily: typography.fontFamily.semibold,
+  },
+  planoRow: { gap: 8 },
+  planoItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  planoLabel: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
+  },
+  avisos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avisoTitulo: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.semibold,
+  },
+  avisoTexto: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.regular,
+    lineHeight: 20,
+  },
 });

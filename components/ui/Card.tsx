@@ -1,29 +1,29 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { StyleSheet, View, ViewProps } from 'react-native';
 
-interface CardProps {
-  children: React.ReactNode;
-  style?: ViewStyle;
-  highlight?: boolean;
+import { colors, radius, spacing } from '@/constants/theme';
+
+interface CardProps extends ViewProps {
+  elevated?: boolean;
 }
 
-export function Card({ children, style, highlight = false }: CardProps) {
+export function Card({ elevated = false, style, children, ...rest }: CardProps) {
   return (
-    <View style={[styles.card, highlight && styles.highlight, style]}>{children}</View>
+    <View
+      style={[styles.card, elevated && { backgroundColor: colors.surfaceElevated }, style]}
+      {...rest}
+    >
+      {children}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.card,
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: 16,
-  },
-  highlight: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255,106,0,0.08)',
+    borderColor: colors.border,
+    padding: spacing.md,
   },
 });

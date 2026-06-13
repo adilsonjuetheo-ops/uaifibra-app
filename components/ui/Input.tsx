@@ -1,67 +1,72 @@
 import React, { useState } from 'react';
 import {
-  View,
-  TextInput,
-  Text,
-  TouchableOpacity,
   StyleSheet,
+  Text,
+  TextInput,
   TextInputProps,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+
+import { colors, radius, typography } from '@/constants/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
-  error?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  isPassword?: boolean;
+  error?: string | null;
+  rightElement?: React.ReactNode;
 }
 
-export function Input({ label, error, icon, isPassword = false, style, ...props }: InputProps) {
-  const [showPass, setShowPass] = useState(false);
-
+export function Input({ label, error, rightElement, style, ...rest }: InputProps) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.container, error ? styles.containerError : null]}>
-        {icon && <Ionicons name={icon} size={20} color={Colors.textMuted} style={styles.icon} />}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View
+        style={[
+          styles.inputRow,
+          focused && { borderColor: colors.primary },
+          !!error && { borderColor: colors.danger },
+        ]}
+      >
         <TextInput
+          placeholderTextColor={colors.textSecondary}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           style={[styles.input, style]}
-          placeholderTextColor={Colors.textDim}
-          secureTextEntry={isPassword && !showPass}
-          {...props}
+          {...rest}
         />
-        {isPassword && (
-          <TouchableOpacity onPress={() => setShowPass((v) => !v)} style={styles.eyeBtn}>
-            <Ionicons
-              name={showPass ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
-              color={Colors.textMuted}
-            />
-          </TouchableOpacity>
-        )}
+        {rightElement}
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { marginBottom: 16 },
-  label: { color: Colors.textMuted, fontSize: 13, marginBottom: 6, fontWeight: '600' },
-  container: {
+  wrapper: { gap: 6 },
+  label: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fontFamily.medium,
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: 14,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
-    height: 52,
   },
-  containerError: { borderColor: Colors.danger },
-  icon: { marginRight: 10 },
-  input: { flex: 1, color: Colors.white, fontSize: 16, height: '100%' },
-  eyeBtn: { padding: 4 },
-  error: { color: Colors.danger, fontSize: 12, marginTop: 4 },
+  input: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: typography.sizes.base,
+    fontFamily: typography.fontFamily.regular,
+    paddingVertical: 14,
+  },
+  error: {
+    color: colors.danger,
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fontFamily.regular,
+  },
 });

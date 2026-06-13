@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UaiFibra Painel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #22c55e;
+      --green-dark: #16a34a;
+      --bg:         #0d0d0d;
+      --surface:    #1a1a1a;
+      --elevated:   #242424;
+      --border:     #2a2a2a;
+      --text:       #ffffff;
+      --muted:      #a0a0a0;
+      --danger:     #ef4444;
+      --warning:    #f59e0b;
+      --info:       #3b82f6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 1.5rem;
+      height: 56px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-right: 1.5rem;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--elevated);
+      border: 1.5px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .brand-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--green);
+    }
+
+    .nav-tabs { display: flex; flex: 1; gap: 0; }
+
+    .nav-tab {
+      padding: 0 1rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+
+    .nav-tab:hover  { color: var(--text); }
+    .nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-left: auto;
+    }
+
+    .nav-user {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .btn-sair {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-sair:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .tab-content { display: none; flex-direction: column; gap: 1.25rem; }
+    .tab-content.active { display: flex; }
+
+    /* ── Stats row ───────────────────────────────────────────────────────── */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .stat-label {
+      margin-top: 0.35rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-title.yellow { color: var(--warning); }
+
+    /* ── Form ────────────────────────────────────────────────────────────── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    input, select, textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus { border-color: var(--green); }
+
+    select option { background: var(--surface); }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      border: none;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .btn:active  { opacity: 0.8; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary { background: var(--green); color: #000; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-dark); color: #fff; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* ── Notices list ────────────────────────────────────────────────────── */
+    .aviso-item {
+      border-left: 3px solid var(--info);
+      background: var(--elevated);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .aviso-item[data-tipo="manutencao"] { border-left-color: var(--warning); }
+    .aviso-item[data-tipo="urgente"]    { border-left-color: var(--danger);  }
+
+    .aviso-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .aviso-titulo { font-weight: 700; font-size: 0.95rem; flex: 1; min-width: 0; }
+
+    .aviso-mensagem { font-size: 0.82rem; color: var(--muted); }
+    .aviso-meta     { font-size: 0.75rem; color: #666; }
+
+    .aviso-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .badge-tipo-info       { background: rgba(59,130,246,.18); color: #93c5fd; }
+    .badge-tipo-manutencao { background: rgba(245,158,11,.18); color: #fcd34d; }
+    .badge-tipo-urgente    { background: rgba(239,68,68,.18);  color: #fca5a5; }
+
+    .badge-ar   { background: rgba(34,197,94,.2);  color: #86efac; }
+    .badge-push { background: rgba(34,197,94,.2);  color: #86efac; }
+    .badge-off  { background: rgba(160,160,160,.1); color: #666; }
+
+    /* ── Table (tokens) ──────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid #1e1e1e;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    td:first-child { color: var(--text); word-break: break-all; font-size: 0.78rem; }
+
+    tr:last-child td { border-bottom: none; }
+
+    /* ── Misc ────────────────────────────────────────────────────────────── */
+    .empty { text-align: center; color: var(--muted); padding: 2rem; font-size: 0.9rem; }
+
+    .toast-wrap {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+    }
+
+    .toast {
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 1.2rem;
+      font-size: 0.88rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.5);
+      animation: slideUp 0.2s ease;
+    }
+
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error   { border-color: var(--danger); color: var(--danger); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Edit modal ──────────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 600px) {
+      .stats     { grid-template-columns: 1fr; }
+      .form-row  { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav>
+  <a class="nav-brand" href="/">
+    <div class="brand-icon">🌿</div>
+    <span class="brand-name">UaiFibra</span>
+  </a>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="avisos">Avisos</div>
+    <div class="nav-tab" data-tab="usuarios">Usuários</div>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-usuario"></span>
+    <button class="btn-sair" id="btn-sair">Sair</button>
+  </div>
+</nav>
+
+<!-- Main content -->
+<main>
+
+  <!-- ── Tab: Avisos ──────────────────────────────────────────────────────── -->
+  <div class="tab-content active" id="tab-avisos">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-dispositivos">—</div>
+        <div class="stat-label">dispositivos registrados para push</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-avisos">—</div>
+        <div class="stat-label">avisos ativos ou agendados</div>
+      </div>
+    </div>
+
+    <!-- Publish form -->
+    <div class="card">
+      <div class="card-title">📢 Publicar novo aviso</div>
+
+      <div class="field">
+        <label for="f-titulo">Título</label>
+        <input id="f-titulo" type="text" placeholder="Ex.: Manutenção programada em Berilo" />
+      </div>
+
+      <div class="field">
+        <label for="f-mensagem">Mensagem</label>
+        <textarea id="f-mensagem" placeholder="Texto completo que o cliente verá no app"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="f-tipo">Tipo</label>
+          <select id="f-tipo">
+            <option value="info">ℹ️ Informativo</option>
+            <option value="manutencao">🔧 Manutenção</option>
+            <option value="urgente">🚨 Urgente</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-cidades">Cidades (vazio = todas; separe por vírgula)</label>
+          <input id="f-cidades" type="text" placeholder="Berilo, Jenipapo de Minas" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="f-de">Exibir a partir de</label>
+          <input id="f-de" type="date" />
+        </div>
+        <div class="field">
+          <label for="f-ate">Exibir até</label>
+          <input id="f-ate" type="date" />
+        </div>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" id="f-push" />
+        ⚠️ Enviar push notification para os celulares agora
+      </label>
+
+      <div>
+        <button class="btn btn-primary" id="btn-publicar">Publicar aviso</button>
+      </div>
+    </div>
+
+    <!-- Published list -->
+    <div class="card">
+      <div class="card-title yellow">🟡 Avisos publicados</div>
+      <div id="lista-avisos"><div class="empty">Carregando…</div></div>
+    </div>
+
+  </div>
+
+  <!-- ── Tab: Usuários ────────────────────────────────────────────────────── -->
+  <div class="tab-content" id="tab-usuarios">
+
+    <!-- Push manual -->
+    <div class="card">
+      <div class="card-title">🔔 Enviar push manual</div>
+
+      <div class="field">
+        <label for="p-titulo">Título</label>
+        <input id="p-titulo" type="text" placeholder="Título da notificação" />
+      </div>
+
+      <div class="field">
+        <label for="p-mensagem">Mensagem</label>
+        <textarea id="p-mensagem" placeholder="Corpo da notificação" style="min-height:72px"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="p-cidades">Cidades (vazio = todos os dispositivos)</label>
+        <input id="p-cidades" type="text" placeholder="Berilo, Jenipapo de Minas" />
+      </div>
+
+      <div>
+        <button class="btn btn-primary" id="btn-push-manual">Enviar push</button>
+      </div>
+    </div>
+
+    <!-- Devices table -->
+    <div class="card">
+      <div class="card-title">📱 Dispositivos registrados</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>ID Cliente</th>
+              <th>Cidade</th>
+              <th>Registrado em</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-tokens">
+            <tr><td colspan="4" class="empty">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- Edit modal -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar aviso</div>
+
+    <input type="hidden" id="e-id" />
+
+    <div class="field">
+      <label for="e-titulo">Título</label>
+      <input id="e-titulo" type="text" />
+    </div>
+
+    <div class="field">
+      <label for="e-mensagem">Mensagem</label>
+      <textarea id="e-mensagem"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="e-tipo">Tipo</label>
+        <select id="e-tipo">
+          <option value="info">ℹ️ Informativo</option>
+          <option value="manutencao">🔧 Manutenção</option>
+          <option value="urgente">🚨 Urgente</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="e-cidades">Cidades</label>
+        <input id="e-cidades" type="text" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="e-de">Exibir a partir de</label>
+        <input id="e-de" type="date" />
+      </div>
+      <div class="field">
+        <label for="e-ate">Exibir até</label>
+        <input id="e-ate" type="date" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btn-cancelar-editar">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-editar">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+  // ── Auth guard ─────────────────────────────────────────────────────────────
+  const TOKEN = localStorage.getItem('painel_token');
+  if (!TOKEN) location.href = '/login.html';
+  document.getElementById('nav-usuario').textContent =
+    'Olá, ' + (localStorage.getItem('painel_usuario') || 'Administrador');
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  async function api(method, path, body) {
+    const res = await fetch(path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + TOKEN,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) { localStorage.clear(); location.href = '/login.html'; }
+    return res.json();
+  }
+
+  function toast(msg, tipo = 'success') {
+    const wrap = document.getElementById('toast-wrap');
+    const el = document.createElement('div');
+    el.className = 'toast ' + tipo;
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('pt-BR');
+  }
+
+  function fmtShort(iso) {
+    if (!iso) return '';
+    return iso.slice(0, 10).split('-').reverse().join('/');
+  }
+
+  function badgeTipo(tipo) {
+    const map = { info: 'badge-tipo-info', manutencao: 'badge-tipo-manutencao', urgente: 'badge-tipo-urgente' };
+    const labels = { info: 'INFO', manutencao: 'MANUTENÇÃO', urgente: 'URGENTE' };
+    return `<span class="badge ${map[tipo] || 'badge-tipo-info'}">${labels[tipo] || tipo.toUpperCase()}</span>`;
+  }
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  document.querySelectorAll('.nav-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach((t) => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      if (tab.dataset.tab === 'usuarios') carregarTokens();
+    });
+  });
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  document.getElementById('btn-sair').addEventListener('click', () => {
+    localStorage.clear();
+    location.href = '/login.html';
+  });
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  async function carregarStats() {
+    try {
+      const data = await api('GET', '/api/admin/stats');
+      document.getElementById('stat-dispositivos').textContent = data.dispositivos ?? '—';
+      document.getElementById('stat-avisos').textContent       = data.avisosAtivos ?? '—';
+    } catch { /* silent */ }
+  }
+
+  // ── Avisos list ────────────────────────────────────────────────────────────
+  async function carregarAvisos() {
+    const lista = document.getElementById('lista-avisos');
+    try {
+      const avisos = await api('GET', '/api/admin/avisos');
+      if (!avisos.length) {
+        lista.innerHTML = '<div class="empty">Nenhum aviso publicado ainda.</div>';
+        return;
+      }
+      const hoje = new Date().toISOString().slice(0, 10);
+      lista.innerHTML = avisos.map((a) => {
+        const noAr = (!a.exibirDe || a.exibirDe <= hoje) && (!a.exibirAte || a.exibirAte >= hoje);
+        const datas = [a.exibirDe && `de ${fmtShort(a.exibirDe)}`, a.exibirAte && `até ${fmtShort(a.exibirAte)}`]
+          .filter(Boolean).join(' ');
+        const cidades = a.cidades?.length ? a.cidades.join(', ') : 'Todas as cidades';
+        return `
+          <div class="aviso-item" data-tipo="${a.tipo}">
+            <div class="aviso-header">
+              ${badgeTipo(a.tipo)}
+              <span class="aviso-titulo">${esc(a.titulo)}</span>
+              ${noAr
+                ? '<span class="badge badge-ar">no ar</span>'
+                : '<span class="badge badge-off">fora do ar</span>'}
+              ${a.enviadoPush ? '<span class="badge badge-push">push ✓</span>' : ''}
+            </div>
+            <div class="aviso-mensagem">${esc(a.mensagem)}</div>
+            <div class="aviso-meta">📍 ${esc(cidades)}${datas ? ' · 📅 ' + datas : ''}</div>
+            <div class="aviso-actions">
+              <button class="btn btn-ghost" style="padding:.35rem .8rem;font-size:.8rem"
+                onclick="abrirEditar(${JSON.stringify(JSON.stringify(a))})">✏️ Editar</button>
+              <button class="btn btn-danger" style="padding:.35rem .8rem;font-size:.8rem"
+                onclick="excluirAviso('${a.id}')">🗑️ Excluir</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      lista.innerHTML = '<div class="empty">Erro ao carregar avisos.</div>';
+    }
+  }
+
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Publish form ───────────────────────────────────────────────────────────
+  document.getElementById('btn-publicar').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-publicar');
+    btn.disabled = true;
+    btn.textContent = 'Publicando…';
+    try {
+      const data = await api('POST', '/api/admin/avisos', {
+        titulo:    document.getElementById('f-titulo').value.trim(),
+        mensagem:  document.getElementById('f-mensagem').value.trim(),
+        tipo:      document.getElementById('f-tipo').value,
+        cidades:   document.getElementById('f-cidades').value.trim(),
+        exibirDe:  document.getElementById('f-de').value || '',
+        exibirAte: document.getElementById('f-ate').value || '',
+        enviarPush: document.getElementById('f-push').checked,
+      });
+      if (data.erro) { toast(data.erro, 'error'); return; }
+      toast(data.pushEnviados > 0
+        ? `Aviso publicado e push enviado para ${data.pushEnviados} dispositivo(s)!`
+        : 'Aviso publicado com sucesso!');
+      // reset form
+      ['f-titulo','f-mensagem','f-cidades','f-de','f-ate'].forEach((id) => document.getElementById(id).value = '');
+      document.getElementById('f-tipo').value = 'info';
+      document.getElementById('f-push').checked = false;
+      await Promise.all([carregarAvisos(), carregarStats()]);
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Publicar aviso';
+    }
+  });
+
+  // ── Delete notice ──────────────────────────────────────────────────────────
+  async function excluirAviso(id) {
+    if (!confirm('Tem certeza que deseja excluir este aviso?')) return;
+    try {
+      await api('DELETE', '/api/admin/avisos/' + id);
+      toast('Aviso excluído.');
+      await Promise.all([carregarAvisos(), carregarStats()]);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  // ── Edit modal ─────────────────────────────────────────────────────────────
+  function abrirEditar(jsonStr) {
+    const a = JSON.parse(jsonStr);
+    document.getElementById('e-id').value       = a.id;
+    document.getElementById('e-titulo').value   = a.titulo;
+    document.getElementById('e-mensagem').value = a.mensagem;
+    document.getElementById('e-tipo').value     = a.tipo;
+    document.getElementById('e-cidades').value  = (a.cidades || []).join(', ');
+    document.getElementById('e-de').value       = a.exibirDe || '';
+    document.getElementById('e-ate').value      = a.exibirAte || '';
+    document.getElementById('modal-editar').classList.add('open');
+  }
+
+  document.getElementById('btn-cancelar-editar').addEventListener('click', () => {
+    document.getElementById('modal-editar').classList.remove('open');
+  });
+
+  document.getElementById('modal-editar').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
+
+  document.getElementById('btn-salvar-editar').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-salvar-editar');
+    btn.disabled = true;
+    try {
+      const id = document.getElementById('e-id').value;
+      await api('PUT', '/api/admin/avisos/' + id, {
+        titulo:    document.getElementById('e-titulo').value.trim(),
+        mensagem:  document.getElementById('e-mensagem').value.trim(),
+        tipo:      document.getElementById('e-tipo').value,
+        cidades:   document.getElementById('e-cidades').value.trim(),
+        exibirDe:  document.getElementById('e-de').value || '',
+        exibirAte: document.getElementById('e-ate').value || '',
+      });
+      toast('Aviso atualizado!');
+      document.getElementById('modal-editar').classList.remove('open');
+      await carregarAvisos();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Push tokens ────────────────────────────────────────────────────────────
+  async function carregarTokens() {
+    const tbody = document.getElementById('tabela-tokens');
+    try {
+      const tokens = await api('GET', '/api/admin/tokens');
+      if (!tokens.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhum dispositivo registrado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = tokens.map((t) => `
+        <tr>
+          <td>${esc(t.token)}</td>
+          <td>${esc(t.id_cliente || '—')}</td>
+          <td>${esc(t.cidade || '—')}</td>
+          <td>${fmtDate(t.registrado_em)}</td>
+        </tr>
+      `).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar.</td></tr>';
+    }
+  }
+
+  // ── Manual push ────────────────────────────────────────────────────────────
+  document.getElementById('btn-push-manual').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-push-manual');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    try {
+      const data = await api('POST', '/api/admin/push/enviar', {
+        titulo:   document.getElementById('p-titulo').value.trim(),
+        mensagem: document.getElementById('p-mensagem').value.trim(),
+        cidades:  document.getElementById('p-cidades').value.trim(),
+      });
+      if (data.erro) { toast(data.erro, 'error'); return; }
+      toast(`Push enviado para ${data.enviados} dispositivo(s)!`);
+      ['p-titulo','p-mensagem','p-cidades'].forEach((id) => document.getElementById(id).value = '');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Enviar push';
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  carregarStats();
+  carregarAvisos();
+</script>
+</body>
+</html>

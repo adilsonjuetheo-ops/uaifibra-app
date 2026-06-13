@@ -1,78 +1,137 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { IXC_BASE_URL } from './api';
-import { DEMO_MODE, DEMO_USER } from './demo';
-import type { IXCLoginResponse } from '../types/ixc';
+import * as SecureStore from 'expo-secure-store';
 
-export async function login(cpf: string, senha: string): Promise<IXCLoginResponse> {
-  if (DEMO_MODE) {
-    // Aceita qualquer CPF com senha = 5 primeiros dígitos do CPF
-    const digits = cpf.replace(/\D/g, '');
-    const expectedPass = digits.slice(0, 5);
-    if (senha !== expectedPass && senha !== '12345') {
-      throw new Error('CPF ou senha inválidos. (Demo: use os 5 primeiros dígitos do CPF)');
+import {
+  atualizarCliente,
+  buscarClientePorCpf,
+  buscarClientePorCpfESenha,
+  IXCCliente,
+  nomeCidade,
+} from '@/services/cliente';
+import { onlyDigits } from '@/utils/format';
+import { md5 } from '@/utils/md5';
+
+const KEY_CPF = 'uaifibra.cpf';
+const KEY_SENHA = 'uaifibra.senha';
+const KEY_CLIENTE = 'uaifibra.cliente';
+
+export interface SessaoCliente {
+  id: string;
+  nome: string;
+  cpf: string;
+  email: string;
+  telefone: string;
+  endereco: string;
+  /** Nome da cidade de instalação (para o mural de avisos regional). */
+  cidade?: string | null;
+  /** true quando logou com a senha padrão (5 primeiros dígitos do CPF) — força a troca. */
+  senhaPadrao?: boolean;
+}
+
+function toSessao(cliente: IXCCliente): SessaoCliente {
+  const endereco = [cliente.endereco, cliente.numero, cliente.bairro]
+    .filter(Boolean)
+    .join(', ');
+  return {
+    id: cliente.id,
+    nome: cliente.razao,
+    cpf: onlyDigits(cliente.cnpj_cpf),
+    email: cliente.email ?? '',
+    telefone: cliente.telefone_celular || cliente.fone || '',
+    endereco,
+  };
+}
+
+/**
+ * Autentica o cliente. A API do IXC nunca retorna o campo `senha`, então a
+ * validação é feita server-side, filtrando a busca por CPF + senha:
+ *
+ *  1. senha em texto puro (como o painel grava por padrão);
+ *  2. senha com hash MD5 (instalações com `senha_hotsite_md5` ativo);
+ *  3. cliente sem senha cadastrada → vale a senha padrão do primeiro
+ *     acesso (5 primeiros dígitos do CPF).
+ */
+export async function login(cpf: string, senha: string): Promise<SessaoCliente> {
+  const digits = onlyDigits(cpf);
+  if (digits.length !== 11) throw new Error('CPF inválido. Confira os 11 dígitos.');
+  if (!senha) throw new Error('Informe sua senha.');
+
+  const existe = await buscarClientePorCpf(digits);
+  if (!existe) throw new Error('CPF não encontrado. Verifique os dados ou fale com o suporte.');
+
+  let cliente =
+    (await buscarClientePorCpfESenha(digits, senha)) ??
+    (await buscarClientePorCpfESenha(digits, md5(senha)));
+
+  if (!cliente) {
+    // sem senha cadastrada no IXC: aceita a senha padrão do primeiro acesso
+    const senhaPadrao = digits.slice(0, 5);
+    if (senha === senhaPadrao) {
+      cliente = await buscarClientePorCpfESenha(digits, '');
     }
-    await AsyncStorage.setItem('@uaifibra:user', JSON.stringify(DEMO_USER));
-    return DEMO_USER;
   }
 
-  const cpfLimpo = cpf.replace(/\D/g, '');
-  const credentials = btoa(`${cpfLimpo}:${senha}`);
-
-  const response = await axios.post(
-    `${IXC_BASE_URL}/login`,
-    {},
-    {
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  const data: IXCLoginResponse = response.data;
-
-  if (!data.token) {
-    throw new Error(data.mensagem || 'CPF ou senha inválidos.');
+  if (!cliente) {
+    throw new Error(
+      'Senha incorreta. No primeiro acesso, use os 5 primeiros dígitos do seu CPF.'
+    );
   }
 
-  await AsyncStorage.setItem('@uaifibra:token', data.token);
-  await AsyncStorage.setItem('@uaifibra:user', JSON.stringify(data));
+  const sessao = toSessao(cliente);
+  sessao.cidade = await nomeCidade(cliente.cidade);
+  // logou com a senha padrão? obriga a criar uma senha própria antes de usar o app
+  sessao.senhaPadrao = senha === digits.slice(0, 5);
+  await SecureStore.setItemAsync(KEY_CPF, digits);
+  await SecureStore.setItemAsync(KEY_SENHA, senha);
+  await SecureStore.setItemAsync(KEY_CLIENTE, JSON.stringify(sessao));
+  return sessao;
+}
 
-  return data;
+/** Restaura a sessão salva no SecureStore (ou null se não logado). */
+export async function restaurarSessao(): Promise<SessaoCliente | null> {
+  const raw = await SecureStore.getItemAsync(KEY_CLIENTE);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SessaoCliente;
+  } catch {
+    return null;
+  }
 }
 
 export async function logout(): Promise<void> {
-  await AsyncStorage.removeItem('@uaifibra:token');
-  await AsyncStorage.removeItem('@uaifibra:user');
+  await SecureStore.deleteItemAsync(KEY_CPF);
+  await SecureStore.deleteItemAsync(KEY_SENHA);
+  await SecureStore.deleteItemAsync(KEY_CLIENTE);
 }
 
-export async function getStoredUser(): Promise<IXCLoginResponse | null> {
-  const raw = await AsyncStorage.getItem('@uaifibra:user');
-  if (!raw) return null;
-  return JSON.parse(raw);
-}
-
-export async function alterarSenha(
+/**
+ * Troca a senha do hotsite do cliente no IXC.
+ * `senhaAtual = null` pula a conferência (usado na troca obrigatória do
+ * primeiro acesso, em que a senha atual é a padrão já validada no login).
+ */
+export async function trocarSenha(
   idCliente: string,
-  senhaAtual: string,
+  senhaAtual: string | null,
   novaSenha: string
 ): Promise<void> {
-  if (DEMO_MODE) {
-    await new Promise((r) => setTimeout(r, 800));
-    return;
+  const senhaSalva = await SecureStore.getItemAsync(KEY_SENHA);
+  if (senhaAtual !== null && senhaSalva && senhaAtual !== senhaSalva) {
+    throw new Error('Senha atual incorreta.');
+  }
+  if (novaSenha.length < 6) {
+    throw new Error('A nova senha deve ter no mínimo 6 caracteres.');
   }
 
-  const token = await AsyncStorage.getItem('@uaifibra:token');
-  await axios.post(
-    `${IXC_BASE_URL}/cliente/${idCliente}/alterar_senha`,
-    { senha_atual: senhaAtual, nova_senha: novaSenha },
-    {
-      headers: {
-        Authorization: `Basic ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  const sessao = await restaurarSessao();
+  if (sessao && novaSenha === sessao.cpf.slice(0, 5)) {
+    throw new Error('A nova senha não pode ser igual à senha padrão (início do CPF).');
+  }
+
+  await atualizarCliente(idCliente, { senha: novaSenha });
+  await SecureStore.setItemAsync(KEY_SENHA, novaSenha);
+
+  // a partir daqui o cliente tem senha própria
+  if (sessao) {
+    const atualizada = { ...sessao, senhaPadrao: false };
+    await SecureStore.setItemAsync(KEY_CLIENTE, JSON.stringify(atualizada));
+  }
 }

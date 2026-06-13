@@ -1,32 +1,91 @@
-import { useEffect } from 'react';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useAuthStore } from '../store/authStore';
-import { getStoredUser } from '../services/auth';
+import React, { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
-});
+import { BiometricGate } from '@/components/BiometricGate';
+import { Toast } from '@/components/ui/Toast';
+import { colors } from '@/constants/theme';
+import { useNotificationNavigation } from '@/hooks/useNotifications';
+import { useAuthStore } from '@/store/authStore';
+import { useBiometricStore } from '@/store/biometricStore';
+import { useNotificationStore } from '@/store/notificationStore';
+// registra a task de background no escopo do módulo
+import '@/tasks/backgroundFetch';
+
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const setUser = useAuthStore((s) => s.setUser);
+  const { cliente, carregando, hidratar } = useAuthStore();
+  const hidratarNotificacoes = useNotificationStore((s) => s.hidratar);
+  const hidratarBiometria = useBiometricStore((s) => s.hidratar);
+
+  const [fontesOk] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  useNotificationNavigation();
 
   useEffect(() => {
-    getStoredUser().then((user) => {
-      if (user) setUser(user);
-    });
-  }, []);
+    void hidratar();
+    void hidratarNotificacoes();
+    void hidratarBiometria();
+  }, [hidratar, hidratarNotificacoes, hidratarBiometria]);
+
+  useEffect(() => {
+    if (fontesOk && !carregando) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontesOk, carregando]);
+
+  if (!fontesOk || carregando) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0d0d0d' } }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(auth)/alterar-senha" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="light" backgroundColor={colors.background} />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
+            contentStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+          }}
+        >
+          {/* senha padrão do 1º acesso: só libera as abas após criar senha própria */}
+          <Stack.Protected guard={!!cliente && !cliente.senhaPadrao}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="fatura/[id]"
+              options={{ title: 'Pagamento', headerBackTitle: 'Voltar' }}
+            />
+          </Stack.Protected>
+          <Stack.Protected guard={!!cliente}>
+            <Stack.Screen
+              name="change-password"
+              options={{ title: 'Alterar Senha', headerBackTitle: 'Voltar' }}
+            />
+          </Stack.Protected>
+          <Stack.Protected guard={!cliente}>
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+          </Stack.Protected>
+        </Stack>
+        <BiometricGate />
+        <Toast />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
