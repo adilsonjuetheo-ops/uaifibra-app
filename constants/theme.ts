@@ -1,17 +1,18 @@
 export const colors = {
-  primary: '#22c55e', // Verde UaiFibra
-  primaryDark: '#16a34a', // Verde escuro para hover/pressed
-  primaryLight: '#4ade80', // Verde claro para destaques
-  background: '#0D0D0D', // Fundo principal (preto)
-  surface: '#1A1A1A', // Cards e superfícies
+  primary: '#FF6A00',     // Laranja UaiFibra
+  primaryDark: '#C85400', // Laranja escuro para hover/pressed
+  primaryLight: '#FF9040', // Laranja claro para destaques
+  secondary: '#1E3A8A',   // Azul marinho UaiFibra (cor do "FIBRA" na logo)
+  background: '#0D0D0D',  // Fundo principal (preto)
+  surface: '#1A1A1A',     // Cards e superfícies
   surfaceElevated: '#242424', // Cards elevados
-  border: '#2A2A2A', // Bordas sutis
+  border: '#2A2A2A',      // Bordas sutis
   textPrimary: '#FFFFFF', // Texto principal
   textSecondary: '#A0A0A0', // Texto secundário/muted
-  success: '#22c55e', // Verde = pago/ativo
-  warning: '#F59E0B', // Amarelo = a vencer
-  danger: '#EF4444', // Vermelho = vencido/bloqueado
-  info: '#3B82F6', // Azul = informativo
+  success: '#00C851',     // Verde = pago/ativo
+  warning: '#F59E0B',     // Amarelo = a vencer
+  danger: '#EF4444',      // Vermelho = vencido/bloqueado
+  info: '#3B82F6',        // Azul = informativo
 };
 
 export const typography = {
