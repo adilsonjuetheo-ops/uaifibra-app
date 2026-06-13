@@ -18,7 +18,7 @@ const ADMIN_PASS = process.env.ADMIN_PASS || 'uaifibra2024';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new Database(path.join(DATA_DIR, 'painel.db'));
