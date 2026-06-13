@@ -7,6 +7,7 @@ import {
   IXCCliente,
   nomeCidade,
 } from '@/services/cliente';
+import { DEMO_CPF, DEMO_SENHA_PADRAO, demoSessao, isDemoCliente } from '@/services/demo';
 import { onlyDigits } from '@/utils/format';
 import { md5 } from '@/utils/md5';
 
@@ -54,6 +55,24 @@ export async function login(cpf: string, senha: string): Promise<SessaoCliente> 
   const digits = onlyDigits(cpf);
   if (digits.length !== 11) throw new Error('CPF inválido. Confira os 11 dígitos.');
   if (!senha) throw new Error('Informe sua senha.');
+
+  // ── Usuário de teste (sem API configurada) ──────────────────────────────
+  if (digits === DEMO_CPF) {
+    const senhaPadrao = digits.slice(0, 5);
+    if (senha !== senhaPadrao && senha !== DEMO_SENHA_PADRAO) {
+      // após trocar a senha no demo, ela fica salva no SecureStore
+      const senhaSalva = await SecureStore.getItemAsync(KEY_SENHA);
+      if (!senhaSalva || senha !== senhaSalva) {
+        throw new Error('Senha incorreta.');
+      }
+    }
+    const sessao = demoSessao(senha === senhaPadrao);
+    await SecureStore.setItemAsync(KEY_CPF, digits);
+    await SecureStore.setItemAsync(KEY_SENHA, senha);
+    await SecureStore.setItemAsync(KEY_CLIENTE, JSON.stringify(sessao));
+    return sessao;
+  }
+  // ───────────────────────────────────────────────────────────────────────
 
   const existe = await buscarClientePorCpf(digits);
   if (!existe) throw new Error('CPF não encontrado. Verifique os dados ou fale com o suporte.');
@@ -126,7 +145,9 @@ export async function trocarSenha(
     throw new Error('A nova senha não pode ser igual à senha padrão (início do CPF).');
   }
 
-  await atualizarCliente(idCliente, { senha: novaSenha });
+  if (!isDemoCliente(idCliente)) {
+    await atualizarCliente(idCliente, { senha: novaSenha });
+  }
   await SecureStore.setItemAsync(KEY_SENHA, novaSenha);
 
   // a partir daqui o cliente tem senha própria

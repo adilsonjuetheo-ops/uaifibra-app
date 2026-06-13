@@ -1,4 +1,5 @@
 import { IXC } from '@/constants/ixcEndpoints';
+import { demoContratos, isDemoCliente } from '@/services/demo';
 import { ixcApi, ixcList } from '@/services/ixc';
 import { onlyDigits } from '@/utils/format';
 
@@ -90,6 +91,7 @@ export async function nomeCidade(idCidade: string | undefined): Promise<string |
 
 /** Busca os contratos do cliente (plano, status da conexão etc.). */
 export async function buscarContratos(idCliente: string): Promise<IXCContrato[]> {
+  if (isDemoCliente(idCliente)) return demoContratos();
   return ixcList<IXCContrato>(IXC.CONTRATO, {
     qtype: 'cliente_contrato.id_cliente',
     query: idCliente,

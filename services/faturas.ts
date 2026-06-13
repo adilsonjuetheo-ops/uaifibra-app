@@ -1,4 +1,5 @@
 import { IXC } from '@/constants/ixcEndpoints';
+import { demoFaturas, isDemoCliente } from '@/services/demo';
 import { ixcApi, ixcList } from '@/services/ixc';
 import { daysUntil } from '@/utils/format';
 
@@ -25,6 +26,7 @@ export function statusFatura(fatura: IXCFatura): FaturaStatus {
 
 /** Lista as faturas do cliente, mais recentes primeiro. */
 export async function listarFaturas(idCliente: string): Promise<IXCFatura[]> {
+  if (isDemoCliente(idCliente)) return demoFaturas();
   const registros = await ixcList<IXCFatura>(IXC.FATURAS, {
     qtype: 'fn_areceber.id_cliente',
     query: idCliente,
