@@ -11,7 +11,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 
 import { DesbloqueioModal } from '@/components/faturas/DesbloqueioModal';
 import { Badge } from '@/components/ui/Badge';
@@ -23,15 +22,11 @@ import { colors, radius, spacing, typography } from '@/constants/theme';
 import {
   IXCFatura,
   obterBoletoPdfBase64,
-  obterPix,
-  PixInfo,
   statusFatura,
 } from '@/services/faturas';
 import { friendlyError, ixcList } from '@/services/ixc';
 import { showToast } from '@/store/toastStore';
 import { formatCurrency, formatDate, monthRef } from '@/utils/format';
-
-type Metodo = 'pix' | 'boleto';
 
 export default function FaturaDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,10 +34,6 @@ export default function FaturaDetalheScreen() {
   const [fatura, setFatura] = useState<IXCFatura | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-
-  const [metodo, setMetodo] = useState<Metodo>('pix');
-  const [pix, setPix] = useState<PixInfo | null>(null);
-  const [pixCarregado, setPixCarregado] = useState(false);
   const [gerandoBoleto, setGerandoBoleto] = useState(false);
   const [modalDesbloqueio, setModalDesbloqueio] = useState(false);
 
@@ -55,20 +46,7 @@ export default function FaturaDetalheScreen() {
         query: String(id),
         oper: '=',
       });
-      const f = registros[0] ?? null;
-      setFatura(f);
-      if (f) {
-        // PIX pode não estar configurado no provedor — nesse caso ocultamos a aba
-        try {
-          const info = await obterPix(f.id);
-          setPix(info);
-          if (!info) setMetodo('boleto');
-        } catch {
-          setPix(null);
-          setMetodo('boleto');
-        }
-        setPixCarregado(true);
-      }
+      setFatura(registros[0] ?? null);
     } catch (error) {
       setErro(friendlyError(error));
     } finally {
@@ -149,127 +127,48 @@ export default function FaturaDetalheScreen() {
         </Card>
       ) : (
         <>
-          {/* Seletor de método */}
-          <View style={styles.metodos}>
-            {pix ? (
-              <Pressable
-                style={[styles.metodo, metodo === 'pix' && styles.metodoAtivo]}
-                onPress={() => setMetodo('pix')}
-              >
-                <MaterialCommunityIcons
-                  name="qrcode"
-                  size={20}
-                  color={metodo === 'pix' ? colors.primary : colors.textSecondary}
-                />
-                <Text
-                  style={[styles.metodoTexto, metodo === 'pix' && styles.metodoTextoAtivo]}
+          <Card style={{ gap: spacing.md }}>
+            <Text style={styles.secaoTitulo}>2ª via de boleto</Text>
+            {fatura.linha_digitavel ? (
+              <>
+                <Text style={styles.linhaLabel}>Linha digitável</Text>
+                <Pressable
+                  style={styles.linhaBox}
+                  onPress={() =>
+                    void copiar(fatura.linha_digitavel!, 'Código de barras copiado!')
+                  }
                 >
-                  PIX
-                </Text>
-              </Pressable>
-            ) : null}
-            <Pressable
-              style={[styles.metodo, metodo === 'boleto' && styles.metodoAtivo]}
-              onPress={() => setMetodo('boleto')}
-            >
-              <MaterialCommunityIcons
-                name="barcode"
-                size={20}
-                color={metodo === 'boleto' ? colors.primary : colors.textSecondary}
-              />
-              <Text
-                style={[styles.metodoTexto, metodo === 'boleto' && styles.metodoTextoAtivo]}
-              >
-                Boleto
-              </Text>
-            </Pressable>
-          </View>
-
-          {metodo === 'pix' && pix ? (
-            <Card style={{ alignItems: 'center', gap: spacing.md }}>
-              <Text style={styles.secaoTitulo}>Pague com PIX</Text>
-              <View style={styles.qrBox}>
-                <QRCode value={pix.qrcodeText} size={200} backgroundColor="#FFFFFF" />
-              </View>
-              <Text style={styles.chavePix} numberOfLines={2}>
-                {pix.qrcodeText}
-              </Text>
-              <Button
-                title="Copiar chave PIX"
-                onPress={() => void copiar(pix.qrcodeText, 'Chave PIX copiada!')}
-                icon={<MaterialCommunityIcons name="content-copy" size={18} color="#FFF" />}
-                style={{ alignSelf: 'stretch' }}
-              />
-              <View style={styles.infoRow}>
-                <MaterialCommunityIcons
-                  name="clock-outline"
-                  size={16}
-                  color={colors.textSecondary}
+                  <Text style={styles.linhaTexto}>{fatura.linha_digitavel}</Text>
+                </Pressable>
+                <Button
+                  title="Copiar código de barras"
+                  variant="secondary"
+                  onPress={() =>
+                    void copiar(fatura.linha_digitavel!, 'Código de barras copiado!')
+                  }
+                  icon={
+                    <MaterialCommunityIcons
+                      name="content-copy"
+                      size={18}
+                      color={colors.primary}
+                    />
+                  }
                 />
-                <Text style={styles.infoTexto}>
-                  Após o pagamento, pode levar até 1 hora para compensar.
-                </Text>
-              </View>
-            </Card>
-          ) : null}
-
-          {metodo === 'boleto' ? (
-            <Card style={{ gap: spacing.md }}>
-              <Text style={styles.secaoTitulo}>2ª via de boleto</Text>
-              {fatura.linha_digitavel ? (
-                <>
-                  <Text style={styles.linhaLabel}>Linha digitável</Text>
-                  <Pressable
-                    style={styles.linhaBox}
-                    onPress={() =>
-                      void copiar(fatura.linha_digitavel!, 'Código de barras copiado!')
-                    }
-                  >
-                    <Text style={styles.linhaTexto}>{fatura.linha_digitavel}</Text>
-                  </Pressable>
-                  <Button
-                    title="Copiar código de barras"
-                    variant="secondary"
-                    onPress={() =>
-                      void copiar(fatura.linha_digitavel!, 'Código de barras copiado!')
-                    }
-                    icon={
-                      <MaterialCommunityIcons
-                        name="content-copy"
-                        size={18}
-                        color={colors.primary}
-                      />
-                    }
-                  />
-                </>
-              ) : (
-                <Text style={styles.infoTexto}>
-                  Linha digitável indisponível. Abra o boleto em PDF abaixo.
-                </Text>
-              )}
-              <Button
-                title="Abrir boleto PDF"
-                onPress={abrirBoletoPdf}
-                loading={gerandoBoleto}
-                icon={
-                  <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FFF" />
-                }
-              />
-            </Card>
-          ) : null}
-
-          {!pixCarregado ? null : !pix && metodo === 'boleto' ? (
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons
-                name="information-outline"
-                size={16}
-                color={colors.textSecondary}
-              />
+              </>
+            ) : (
               <Text style={styles.infoTexto}>
-                PIX indisponível para esta fatura. Use o boleto.
+                Linha digitável indisponível. Abra o boleto em PDF abaixo.
               </Text>
-            </View>
-          ) : null}
+            )}
+            <Button
+              title="Abrir boleto PDF"
+              onPress={abrirBoletoPdf}
+              loading={gerandoBoleto}
+              icon={
+                <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FFF" />
+              }
+            />
+          </Card>
 
           {vencida ? (
             <Card style={{ gap: spacing.sm }}>
@@ -346,44 +245,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
     textAlign: 'center',
   },
-  metodos: { flexDirection: 'row', gap: spacing.sm },
-  metodo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  metodoAtivo: {
-    backgroundColor: 'rgba(0, 166, 81, 0.12)',
-    borderColor: colors.primary,
-  },
-  metodoTexto: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.base,
-    fontFamily: typography.fontFamily.semibold,
-  },
-  metodoTextoAtivo: { color: colors.primary },
   secaoTitulo: {
     color: colors.textPrimary,
     fontSize: typography.sizes.lg,
     fontFamily: typography.fontFamily.semibold,
-  },
-  qrBox: {
-    backgroundColor: '#FFFFFF',
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  chavePix: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.xs,
-    fontFamily: typography.fontFamily.regular,
-    textAlign: 'center',
   },
   linhaLabel: {
     color: colors.textSecondary,
@@ -403,13 +268,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     letterSpacing: 0.5,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   infoTexto: {
-    flex: 1,
     color: colors.textSecondary,
     fontSize: typography.sizes.sm,
     fontFamily: typography.fontFamily.regular,

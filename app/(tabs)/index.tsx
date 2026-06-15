@@ -241,7 +241,7 @@ export default function HomeScreen() {
           <Text style={styles.avisoTexto}>
             {faturaVencida
               ? 'Você possui fatura vencida. Pague agora para evitar bloqueio do acesso.'
-              : 'Pague suas faturas pelo app com PIX e tenha a liberação em até 1 hora.'}
+              : 'Acesse suas faturas pelo app e pague com boleto bancário.'}
           </Text>
         </Card>
       )}
