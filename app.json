@@ -6,13 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "uaifibra",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0D0D0D",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F4F6FF",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D0D0D"
+      "backgroundColor": "#F4F6FF"
     },
     "ios": {
       "supportsTablet": false,
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png",
-        "backgroundColor": "#0D0D0D"
+        "backgroundColor": "#F4F6FF"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -61,7 +61,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#0D0D0D"
+          "backgroundColor": "#F4F6FF"
         }
       ]
     ],

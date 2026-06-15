@@ -67,10 +67,10 @@ export function DesbloqueioModal({ visible, onClose, onSuccess }: DesbloqueioMod
                 color={colors.primary}
                 style={{ alignSelf: 'center' }}
               />
-              <Text style={styles.titulo}>Acesso liberado por 5 dias ⏳</Text>
+              <Text style={styles.titulo}>Acesso liberado por 24 horas ⏳</Text>
               <Text style={styles.texto}>
                 Seu desbloqueio em confiança foi ativado. Realize o pagamento da fatura
-                dentro do prazo para evitar um novo bloqueio.
+                em até 24 horas para evitar um novo bloqueio.
               </Text>
               <Button title="Entendi" onPress={fechar} />
             </>
@@ -84,8 +84,8 @@ export function DesbloqueioModal({ visible, onClose, onSuccess }: DesbloqueioMod
               />
               <Text style={styles.titulo}>Desbloqueio em Confiança</Text>
               <Text style={styles.texto}>
-                O desbloqueio em confiança libera seu acesso por 5 dias. Após esse
-                período, o pagamento será necessário para evitar novo bloqueio.
+                O desbloqueio em confiança libera seu acesso por 24 horas. Após esse
+                prazo, o pagamento será necessário para evitar novo bloqueio.
               </Text>
 
               <Pressable style={styles.checkRow} onPress={() => setAceitou(!aceitou)}>

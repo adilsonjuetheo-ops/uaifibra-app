@@ -106,6 +106,7 @@ async function enviarPushParaTodos(titulo, mensagem, cidadesFiltro) {
         body: mensagem,
         data: { rota: '/avisos' },
         sound: 'default',
+        priority: 'high',
         channelId: 'vencimentos',
       }));
       const resp = await fetch('https://exp.host/--/api/v2/push/send', {

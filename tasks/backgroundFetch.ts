@@ -21,7 +21,7 @@ async function jaNotificada(chave: string): Promise<boolean> {
 }
 
 export async function checarVencimentos(): Promise<boolean> {
-  const ativo = await AsyncStorage.getItem('uaifibra.notificacoes.ativas');
+  const ativo = await AsyncStorage.getItem('uaifibra.notificacoes.lembretes');
   if (ativo === 'false') return false;
 
   const sessao = await restaurarSessao();
@@ -75,7 +75,7 @@ export async function checarVencimentos(): Promise<boolean> {
  * Não exige login: funciona mesmo com o cliente deslogado.
  */
 export async function checarAvisosImportantes(): Promise<boolean> {
-  const ativo = await AsyncStorage.getItem('uaifibra.notificacoes.ativas');
+  const ativo = await AsyncStorage.getItem('uaifibra.notificacoes.lembretes');
   if (ativo === 'false') return false;
 
   const sessao = await restaurarSessao(); // só para o filtro de cidade (opcional)

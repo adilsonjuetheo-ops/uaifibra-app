@@ -1,18 +1,19 @@
 export const colors = {
-  primary: '#FF6A00',     // Laranja UaiFibra
-  primaryDark: '#C85400', // Laranja escuro para hover/pressed
-  primaryLight: '#FF9040', // Laranja claro para destaques
-  secondary: '#1E3A8A',   // Azul marinho UaiFibra (cor do "FIBRA" na logo)
-  background: '#0D0D0D',  // Fundo principal (preto)
-  surface: '#1A1A1A',     // Cards e superfícies
-  surfaceElevated: '#242424', // Cards elevados
-  border: '#2A2A2A',      // Bordas sutis
-  textPrimary: '#FFFFFF', // Texto principal
-  textSecondary: '#A0A0A0', // Texto secundário/muted
-  success: '#00C851',     // Verde = pago/ativo
-  warning: '#F59E0B',     // Amarelo = a vencer
-  danger: '#EF4444',      // Vermelho = vencido/bloqueado
-  info: '#3B82F6',        // Azul = informativo
+  primary: '#FF6A00',        // Laranja UaiFibra (botões CTA, destaques)
+  primaryDark: '#C85400',    // Laranja escuro para hover/pressed
+  primaryLight: '#FFF0E6',   // Laranja muito claro para badges/backgrounds
+  secondary: '#0D1B5E',      // Navy escuro (headings, logo "FIBRA")
+  secondaryLight: '#1E3A8A', // Navy médio para elementos secundários
+  background: '#F4F6FF',     // Fundo principal lavanda claro
+  surface: '#FFFFFF',        // Cards e superfícies
+  surfaceElevated: '#EEF2FF', // Cards levemente destacados
+  border: '#E2E8F0',         // Bordas sutis
+  textPrimary: '#0D1B5E',    // Texto principal navy
+  textSecondary: '#64748B',  // Texto secundário/muted
+  success: '#25D366',        // Verde WhatsApp / ativo / pago
+  warning: '#F59E0B',        // Amarelo = a vencer
+  danger: '#EF4444',         // Vermelho = vencido/bloqueado
+  info: '#3B82F6',           // Azul = informativo
 };
 
 export const typography = {
