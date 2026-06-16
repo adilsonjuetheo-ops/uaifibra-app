@@ -16,7 +16,6 @@ import MaskInput, { Masks } from 'react-native-mask-input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { ENV } from '@/constants/ixcEndpoints';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { configurarNotificacoes } from '@/hooks/useNotifications';
@@ -39,7 +38,6 @@ export default function LoginScreen() {
     setCarregando(true);
     try {
       await login(cpf, senha);
-      // solicita permissão de notificação no primeiro login
       void configurarNotificacoes();
     } catch (error) {
       setErro(error instanceof Error ? error.message : friendlyError(error));
@@ -59,82 +57,77 @@ export default function LoginScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <Image
           source={require('@/assets/logo-glow.png')}
           style={styles.logo}
           resizeMode="contain"
         />
+      </View>
 
-        <Card elevated style={styles.card}>
-          <Text style={styles.titulo}>Acesse sua conta</Text>
-          <Text style={styles.subtitulo}>
-            Entre com seu CPF para acompanhar faturas, planos e muito mais.
+      <ScrollView
+        style={styles.sheet}
+        contentContainerStyle={[
+          styles.sheetContent,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.sheetHandle} />
+
+        <Text style={styles.titulo}>Acesse sua conta</Text>
+        <Text style={styles.subtitulo}>
+          Entre com seu CPF para acompanhar faturas, planos e muito mais.
+        </Text>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>CPF</Text>
+          <View style={styles.inputRow}>
+            <MaterialCommunityIcons name="account-outline" size={20} color={colors.textSecondary} />
+            <MaskInput
+              value={cpf}
+              onChangeText={(masked) => setCpf(masked)}
+              mask={Masks.BRL_CPF}
+              keyboardType="number-pad"
+              placeholder="000.000.000-00"
+              placeholderTextColor={colors.textSecondary}
+              style={styles.input}
+            />
+          </View>
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Senha</Text>
+          <View style={styles.inputRow}>
+            <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
+            <MaskInput
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry={!mostrarSenha}
+              placeholder="Sua senha"
+              placeholderTextColor={colors.textSecondary}
+              style={styles.input}
+            />
+            <Pressable onPress={() => setMostrarSenha(!mostrarSenha)} hitSlop={8}>
+              <MaterialCommunityIcons
+                name={mostrarSenha ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+          </View>
+          <Text style={styles.dica}>
+            No primeiro acesso, use os 5 primeiros dígitos do seu CPF.
           </Text>
+        </View>
 
-          <View style={{ gap: 6 }}>
-            <Text style={styles.label}>CPF</Text>
-            <View style={styles.inputRow}>
-              <MaterialCommunityIcons
-                name="account-outline"
-                size={20}
-                color={colors.textSecondary}
-              />
-              <MaskInput
-                value={cpf}
-                onChangeText={(masked) => setCpf(masked)}
-                mask={Masks.BRL_CPF}
-                keyboardType="number-pad"
-                placeholder="000.000.000-00"
-                placeholderTextColor={colors.textSecondary}
-                style={styles.input}
-              />
-            </View>
-          </View>
+        {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
-          <View style={{ gap: 6 }}>
-            <Text style={styles.label}>Senha</Text>
-            <View style={styles.inputRow}>
-              <MaterialCommunityIcons
-                name="lock-outline"
-                size={20}
-                color={colors.textSecondary}
-              />
-              <MaskInput
-                value={senha}
-                onChangeText={setSenha}
-                secureTextEntry={!mostrarSenha}
-                placeholder="Sua senha"
-                placeholderTextColor={colors.textSecondary}
-                style={styles.input}
-              />
-              <Pressable onPress={() => setMostrarSenha(!mostrarSenha)} hitSlop={8}>
-                <MaterialCommunityIcons
-                  name={mostrarSenha ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
-            </View>
-            <Text style={styles.dica}>
-              No primeiro acesso, use os 5 primeiros dígitos do seu CPF.
-            </Text>
-          </View>
+        <Button title="Entrar" onPress={entrar} loading={carregando} />
 
-          {erro ? <Text style={styles.erro}>{erro}</Text> : null}
-
-          <Button title="Entrar" onPress={entrar} loading={carregando} />
-
-          <Pressable onPress={() => setModalSenha(true)} hitSlop={8}>
-            <Text style={styles.esqueci}>Esqueci minha senha</Text>
-          </Pressable>
-        </Card>
+        <Pressable onPress={() => setModalSenha(true)} hitSlop={8}>
+          <Text style={styles.esqueci}>Esqueci minha senha</Text>
+        </Pressable>
       </ScrollView>
 
       <Modal
@@ -153,8 +146,7 @@ export default function LoginScreen() {
             />
             <Text style={styles.modalTitulo}>Esqueceu sua senha?</Text>
             <Text style={styles.modalTexto}>
-              Entre em contato com o nosso suporte para redefinir a senha de acesso do
-              aplicativo.
+              Entre em contato com o nosso suporte para redefinir a senha de acesso do aplicativo.
             </Text>
             <Button
               title="Falar com o suporte"
@@ -170,19 +162,39 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  container: {
-    flexGrow: 1,
+  flex: { flex: 1, backgroundColor: colors.secondary },
+
+  header: {
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   logo: {
-    width: 280,
-    height: 187,
-    alignSelf: 'center',
+    width: 240,
+    height: 160,
   },
-  card: { gap: spacing.md, padding: spacing.lg },
+
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+  },
+  sheetContent: {
+    padding: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: radius.full,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+
   titulo: {
     color: colors.textPrimary,
     fontSize: typography.sizes['2xl'],
@@ -194,6 +206,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
     lineHeight: 20,
   },
+
+  fieldGroup: { gap: 6 },
   label: {
     color: colors.textSecondary,
     fontSize: typography.sizes.sm,
@@ -203,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -234,6 +248,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 4,
   },
+
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
