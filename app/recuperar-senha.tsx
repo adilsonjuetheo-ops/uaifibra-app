@@ -195,7 +195,7 @@ export default function RecuperarSenhaScreen() {
               <Text style={styles.titulo}>Senha redefinida!</Text>
               <Text style={styles.subtitulo}>
                 Sua senha foi redefinida com sucesso. Faça login usando os{' '}
-                <Text style={styles.destaque}>5 primeiros dígitos do seu CPF</Text> como senha.
+                <Text style={styles.destaque}>4 últimos dígitos do seu CPF</Text> como senha.
                 Você será obrigado a criar uma nova senha após entrar.
               </Text>
             </View>

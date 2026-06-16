@@ -24,7 +24,7 @@ export interface SessaoCliente {
   endereco: string;
   /** Nome da cidade de instalação (para o mural de avisos regional). */
   cidade?: string | null;
-  /** true quando logou com a senha padrão (5 primeiros dígitos do CPF) — força a troca. */
+  /** true quando logou com a senha padrão (4 últimos dígitos do CPF) — força a troca. */
   senhaPadrao?: boolean;
 }
 
@@ -49,7 +49,7 @@ function toSessao(cliente: IXCCliente): SessaoCliente {
  *  1. senha em texto puro (como o painel grava por padrão);
  *  2. senha com hash MD5 (instalações com `senha_hotsite_md5` ativo);
  *  3. cliente sem senha cadastrada → vale a senha padrão do primeiro
- *     acesso (5 primeiros dígitos do CPF).
+ *     acesso (4 últimos dígitos do CPF).
  */
 export async function login(cpf: string, senha: string): Promise<SessaoCliente> {
   const digits = onlyDigits(cpf);
@@ -58,7 +58,7 @@ export async function login(cpf: string, senha: string): Promise<SessaoCliente> 
 
   // ── Usuário de teste (sem API configurada) ──────────────────────────────
   if (digits === DEMO_CPF) {
-    const senhaPadrao = digits.slice(0, 5);
+    const senhaPadrao = digits.slice(-4);
     if (senha !== senhaPadrao && senha !== DEMO_SENHA_PADRAO) {
       // após trocar a senha no demo, ela fica salva no SecureStore
       const senhaSalva = await SecureStore.getItemAsync(KEY_SENHA);
@@ -83,7 +83,7 @@ export async function login(cpf: string, senha: string): Promise<SessaoCliente> 
 
   if (!cliente) {
     // sem senha cadastrada no IXC: aceita a senha padrão do primeiro acesso
-    const senhaPadrao = digits.slice(0, 5);
+    const senhaPadrao = digits.slice(-4);
     if (senha === senhaPadrao) {
       cliente = await buscarClientePorCpfESenha(digits, '');
     }
@@ -91,14 +91,14 @@ export async function login(cpf: string, senha: string): Promise<SessaoCliente> 
 
   if (!cliente) {
     throw new Error(
-      'Senha incorreta. No primeiro acesso, use os 5 primeiros dígitos do seu CPF.'
+      'Senha incorreta. No primeiro acesso, use os 4 últimos dígitos do seu CPF.'
     );
   }
 
   const sessao = toSessao(cliente);
   sessao.cidade = await nomeCidade(cliente.cidade);
   // logou com a senha padrão? obriga a criar uma senha própria antes de usar o app
-  sessao.senhaPadrao = senha === digits.slice(0, 5);
+  sessao.senhaPadrao = senha === digits.slice(-4);
   await SecureStore.setItemAsync(KEY_CPF, digits);
   await SecureStore.setItemAsync(KEY_SENHA, senha);
   await SecureStore.setItemAsync(KEY_CLIENTE, JSON.stringify(sessao));
@@ -141,8 +141,8 @@ export async function trocarSenha(
   }
 
   const sessao = await restaurarSessao();
-  if (sessao && novaSenha === sessao.cpf.slice(0, 5)) {
-    throw new Error('A nova senha não pode ser igual à senha padrão (início do CPF).');
+  if (sessao && novaSenha === sessao.cpf.slice(-4)) {
+    throw new Error('A nova senha não pode ser igual à senha padrão (4 últimos dígitos do CPF).');
   }
 
   if (!isDemoCliente(idCliente)) {

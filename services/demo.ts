@@ -9,7 +9,7 @@ import { IXCFatura } from '@/services/faturas';
 import { SessaoCliente } from '@/services/auth';
 
 export const DEMO_CPF = '12345678900';
-export const DEMO_SENHA_PADRAO = '12345'; // 5 primeiros dígitos
+export const DEMO_SENHA_PADRAO = '8900'; // 4 últimos dígitos do CPF de teste
 
 export function isDemoCliente(idCliente: string): boolean {
   return idCliente === 'DEMO-001';

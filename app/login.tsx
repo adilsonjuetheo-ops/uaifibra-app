@@ -109,7 +109,7 @@ export default function LoginScreen() {
             </Pressable>
           </View>
           <Text style={styles.dica}>
-            No primeiro acesso, use os 5 primeiros dígitos do seu CPF.
+            No primeiro acesso, use os 4 últimos dígitos do seu CPF.
           </Text>
         </View>
 
