@@ -1,10 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,7 +15,6 @@ import MaskInput, { Masks } from 'react-native-mask-input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { ENV } from '@/constants/ixcEndpoints';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { configurarNotificacoes } from '@/hooks/useNotifications';
 import { friendlyError } from '@/services/ixc';
@@ -24,6 +22,7 @@ import { useAuthStore } from '@/store/authStore';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const login = useAuthStore((s) => s.login);
 
   const [cpf, setCpf] = useState('');
@@ -31,7 +30,6 @@ export default function LoginScreen() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [modalSenha, setModalSenha] = useState(false);
 
   const entrar = async () => {
     setErro(null);
@@ -44,12 +42,6 @@ export default function LoginScreen() {
     } finally {
       setCarregando(false);
     }
-  };
-
-  const abrirWhatsApp = () => {
-    void Linking.openURL(
-      `https://wa.me/${ENV.SUPORTE_WHATSAPP}?text=${encodeURIComponent('Olá! Esqueci minha senha do app UaiFibra.')}`
-    );
   };
 
   return (
@@ -125,38 +117,10 @@ export default function LoginScreen() {
 
         <Button title="Entrar" onPress={entrar} loading={carregando} />
 
-        <Pressable onPress={() => setModalSenha(true)} hitSlop={8}>
+        <Pressable onPress={() => router.push('/recuperar-senha')} hitSlop={8}>
           <Text style={styles.esqueci}>Esqueci minha senha</Text>
         </Pressable>
       </ScrollView>
-
-      <Modal
-        visible={modalSenha}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalSenha(false)}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            <MaterialCommunityIcons
-              name="lock-question"
-              size={48}
-              color={colors.primary}
-              style={{ alignSelf: 'center' }}
-            />
-            <Text style={styles.modalTitulo}>Esqueceu sua senha?</Text>
-            <Text style={styles.modalTexto}>
-              Entre em contato com o nosso suporte para redefinir a senha de acesso do aplicativo.
-            </Text>
-            <Button
-              title="Falar com o suporte"
-              onPress={abrirWhatsApp}
-              icon={<MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />}
-            />
-            <Button title="Fechar" variant="ghost" onPress={() => setModalSenha(false)} />
-          </View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -247,33 +211,5 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semibold,
     textAlign: 'center',
     paddingVertical: 4,
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  modal: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  modalTitulo: {
-    color: colors.textPrimary,
-    fontSize: typography.sizes.xl,
-    fontFamily: typography.fontFamily.bold,
-    textAlign: 'center',
-  },
-  modalTexto: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.base,
-    fontFamily: typography.fontFamily.regular,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });
