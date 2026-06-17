@@ -61,11 +61,13 @@ export function BiometricGate() {
 
   return (
     <View style={styles.overlay}>
-      <Image
-        source={require('@/assets/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('@/assets/logo.png')}
+          style={styles.logo}
+          resizeMode="cover"
+        />
+      </View>
       <MaterialCommunityIcons name="fingerprint" size={72} color={colors.primary} />
       <Text style={styles.titulo}>App bloqueado</Text>
       <Text style={styles.texto}>
@@ -97,7 +99,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  logo: { width: 160, height: 160, borderRadius: 80, overflow: 'hidden' },
+  logoContainer: { width: 160, height: 160, borderRadius: 80, overflow: 'hidden' },
+  logo: { width: 160, height: 160 },
   titulo: {
     color: colors.textPrimary,
     fontSize: typography.sizes.xl,

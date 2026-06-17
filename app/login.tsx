@@ -48,11 +48,13 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
-        <Image
-          source={require('@/assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/logo.png')}
+            style={styles.logo}
+            resizeMode="cover"
+          />
+        </View>
       </View>
 
       <ScrollView
@@ -132,11 +134,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  logo: {
+  logoContainer: {
     width: 180,
     height: 180,
     borderRadius: 90,
     overflow: 'hidden',
+  },
+  logo: {
+    width: 180,
+    height: 180,
   },
 
   sheet: {
