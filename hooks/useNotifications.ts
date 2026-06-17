@@ -27,6 +27,14 @@ export async function configurarNotificacoes(): Promise<boolean> {
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: colors.primary,
+        sound: 'notification.wav',
+      });
+      await Notifications.setNotificationChannelAsync('avisos', {
+        name: 'Avisos e comunicados',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: colors.primary,
+        sound: 'notification.wav',
       });
     }
 

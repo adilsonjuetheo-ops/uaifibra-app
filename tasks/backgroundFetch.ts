@@ -42,7 +42,8 @@ export async function checarVencimentos(): Promise<boolean> {
             title: '⚡ Sua fatura vence em 2 dias!',
             body: `Fatura de ${formatCurrency(fatura.valor)} vence em ${formatDate(fatura.data_vencimento)}. Toque para pagar agora.`,
             data: { idFatura: fatura.id },
-            sound: true,
+            sound: 'notification.wav',
+            channelId: 'vencimentos',
           },
           trigger: null,
         });
@@ -58,7 +59,8 @@ export async function checarVencimentos(): Promise<boolean> {
             title: '⚠️ Sua fatura vence hoje!',
             body: `Fatura de ${formatCurrency(fatura.valor)} vence hoje. Toque para pagar e evitar bloqueio.`,
             data: { idFatura: fatura.id },
-            sound: true,
+            sound: 'notification.wav',
+            channelId: 'vencimentos',
           },
           trigger: null,
         });
@@ -91,7 +93,8 @@ export async function checarAvisosImportantes(): Promise<boolean> {
         title: `${aviso.tipo === 'urgente' ? '⚠️' : '🔧'} ${aviso.titulo}`,
         body: aviso.mensagem,
         data: { rota: '/avisos' },
-        sound: true,
+        sound: 'notification.wav',
+        channelId: 'avisos',
       },
       trigger: null,
     });
