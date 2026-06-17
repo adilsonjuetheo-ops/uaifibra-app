@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { configurarNotificacoes } from '@/hooks/useNotifications';
 import { friendlyError } from '@/services/ixc';
 import { useAuthStore } from '@/store/authStore';
 
@@ -36,7 +35,6 @@ export default function LoginScreen() {
     setCarregando(true);
     try {
       await login(cpf, senha);
-      void configurarNotificacoes();
     } catch (error) {
       setErro(error instanceof Error ? error.message : friendlyError(error));
     } finally {

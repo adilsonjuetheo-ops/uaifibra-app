@@ -15,7 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BiometricGate } from '@/components/BiometricGate';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
-import { useNotificationNavigation } from '@/hooks/useNotifications';
+import { configurarNotificacoes, useNotificationNavigation } from '@/hooks/useNotifications';
 import { useAuthStore } from '@/store/authStore';
 import { useBiometricStore } from '@/store/biometricStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -43,6 +43,12 @@ export default function RootLayout() {
     void hidratarNotificacoes();
     void hidratarBiometria();
   }, [hidratar, hidratarNotificacoes, hidratarBiometria]);
+
+  // Re-registra o token push a cada abertura do app enquanto logado.
+  // Garante que reinicializações do servidor não percam os tokens.
+  useEffect(() => {
+    if (cliente) void configurarNotificacoes();
+  }, [cliente]);
 
   useEffect(() => {
     if (fontesOk && !carregando) {
