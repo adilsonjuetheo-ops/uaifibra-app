@@ -150,13 +150,19 @@ export async function trocarSenha(
   }
 
   if (!isDemoCliente(idCliente)) {
-    try {
-      await atualizarCliente(idCliente, { senha: novaSenha });
-    } catch (err) {
-      console.warn('[trocarSenha] falha ao atualizar senha no IXC:', err);
-      throw new Error(
-        'Não foi possível salvar a nova senha no servidor. Tente novamente ou fale com o suporte.'
-      );
+    // Tenta plain text; se o IXC rejeitar, tenta MD5 (instalações com senha_hotsite_md5)
+    let salvoNoIxc = false;
+    for (const valor of [novaSenha, md5(novaSenha)]) {
+      try {
+        await atualizarCliente(idCliente, { senha: valor });
+        salvoNoIxc = true;
+        break;
+      } catch (err) {
+        console.warn('[trocarSenha] falhou:', err instanceof Error ? err.message : err);
+      }
+    }
+    if (!salvoNoIxc) {
+      throw new Error('Não foi possível salvar a nova senha no servidor. Tente novamente ou fale com o suporte.');
     }
   }
   await SecureStore.setItemAsync(KEY_SENHA, novaSenha);

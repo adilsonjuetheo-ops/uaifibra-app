@@ -109,7 +109,17 @@ export async function atualizarCliente(
 ): Promise<void> {
   const atual = await buscarClientePorId(id);
   if (!atual) throw new Error('Cliente não encontrado.');
-  await ixcApi.put(`${IXC.CLIENTE}/${id}`, { ...atual, ...changes });
+  const body = { ...atual, ...changes };
+  // IXC exige telefone_celular no PUT; clientes com só fone fixo usam fone como fallback
+  if (!body.telefone_celular && body.fone) {
+    body.telefone_celular = body.fone;
+  }
+  const resp = await ixcApi.put(`${IXC.CLIENTE}/${id}`, body);
+  const respBody = resp.data as { type?: string; message?: string } | undefined;
+  // IXC às vezes retorna HTTP 200 com type:"error" no corpo indicando falha
+  if (respBody?.type && respBody.type !== 'success') {
+    throw new Error(respBody.message ?? `IXC retornou type="${respBody.type}"`);
+  }
 }
 
 export const STATUS_INTERNET_LABEL: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
