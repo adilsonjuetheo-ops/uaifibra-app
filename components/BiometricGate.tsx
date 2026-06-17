@@ -62,7 +62,7 @@ export function BiometricGate() {
   return (
     <View style={styles.overlay}>
       <Image
-        source={require('@/assets/logo-glow.png')}
+        source={require('@/assets/logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  logo: { width: 220, height: 147 },
+  logo: { width: 160, height: 160 },
   titulo: {
     color: colors.textPrimary,
     fontSize: typography.sizes.xl,

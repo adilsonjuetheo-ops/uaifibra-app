@@ -49,7 +49,7 @@ export default function LoginScreen() {
     >
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <Image
-          source={require('@/assets/logo-glow.png')}
+          source={require('@/assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   logo: {
-    width: 240,
-    height: 160,
+    width: 180,
+    height: 180,
   },
 
   sheet: {
