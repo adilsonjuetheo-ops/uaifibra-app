@@ -135,6 +135,8 @@ const styles = StyleSheet.create({
   logo: {
     width: 180,
     height: 180,
+    borderRadius: 90,
+    overflow: 'hidden',
   },
 
   sheet: {

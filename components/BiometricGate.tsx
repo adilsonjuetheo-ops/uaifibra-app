@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  logo: { width: 160, height: 160 },
+  logo: { width: 160, height: 160, borderRadius: 80, overflow: 'hidden' },
   titulo: {
     color: colors.textPrimary,
     fontSize: typography.sizes.xl,
