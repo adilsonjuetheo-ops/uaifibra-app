@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade — UaiFibra</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #FF6A00;
+      --primary-dark: #C85400;
+      --navy:         #0D1B5E;
+      --bg:           #0d0d0d;
+      --surface:      #1a1a1a;
+      --elevated:     #242424;
+      --border:       #2a2a2a;
+      --text:         #ffffff;
+      --muted:        #a0a0a0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    header .brand {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .updated {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2 .num {
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    p {
+      font-size: 0.92rem;
+      color: #d0d0d0;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      font-size: 0.92rem;
+      color: #d0d0d0;
+      line-height: 1.7;
+      margin-bottom: 4px;
+    }
+
+    .highlight {
+      background: var(--elevated);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="/logo.png" alt="UaiFibra" onerror="this.style.display='none'" />
+  <span class="brand">UaiFibra Telecom</span>
+</header>
+
+<main>
+  <h1>Política de Privacidade</h1>
+  <p class="updated">Última atualização: 17 de junho de 2026</p>
+
+  <section>
+    <h2><span class="num">1</span> Sobre esta Política</h2>
+    <p>
+      Esta Política de Privacidade descreve como a <strong>UaiFibra Telecom</strong> coleta,
+      usa e protege as informações dos clientes que utilizam o aplicativo móvel <strong>UaiFibra</strong>
+      (disponível para Android e iOS).
+    </p>
+    <p>
+      Ao utilizar o aplicativo, você concorda com as práticas descritas neste documento,
+      em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD — Lei nº 13.709/2018).
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span> Dados Coletados</h2>
+    <p>O aplicativo coleta apenas os dados necessários para o funcionamento dos serviços:</p>
+    <ul>
+      <li><strong>CPF:</strong> utilizado como identificador de autenticação junto ao sistema do provedor.</li>
+      <li><strong>Senha:</strong> transmitida de forma segura ao sistema IXC Soft do provedor; não é armazenada em texto simples no dispositivo.</li>
+      <li><strong>Cidade:</strong> coletada a partir do cadastro do contrato, usada para filtrar notificações e avisos por região.</li>
+      <li><strong>Token de notificação push:</strong> identificador anônimo gerado pelo serviço Expo/FCM/APNs para envio de notificações. Pode ser coletado mesmo sem login.</li>
+      <li><strong>Dados do contrato:</strong> nome, situação da conexão, faturas e vencimentos — lidos diretamente do sistema do provedor no momento da consulta.</li>
+    </ul>
+    <div class="highlight">
+      O aplicativo <strong>não coleta</strong> localização geográfica, contatos, câmera, microfone,
+      dados bancários nem qualquer informação além das listadas acima.
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span> Finalidade do Uso dos Dados</h2>
+    <ul>
+      <li><strong>Autenticação:</strong> verificar a identidade do cliente para acesso à conta.</li>
+      <li><strong>Consulta de faturas:</strong> exibir segunda via de boletos e situação do contrato.</li>
+      <li><strong>Notificações push:</strong> enviar avisos de vencimento, manutenções e comunicados do provedor.</li>
+      <li><strong>Avisos regionais:</strong> exibir informações relevantes para a cidade do cliente.</li>
+      <li><strong>Desbloqueio temporário:</strong> solicitar reativação da conexão por até 24 horas em caso de atraso.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">4</span> Armazenamento e Segurança</h2>
+    <p>
+      As credenciais de acesso (CPF e senha) são armazenadas localmente no dispositivo
+      utilizando <strong>SecureStore</strong> (armazenamento criptografado do sistema operacional),
+      exclusivamente para permitir o desbloqueio biométrico sem redigitar a senha.
+    </p>
+    <p>
+      Os tokens de notificação push são armazenados em banco de dados seguro (PostgreSQL)
+      hospedado na infraestrutura do provedor, associados opcionalmente ao identificador
+      do contrato e à cidade.
+    </p>
+    <p>
+      Nenhum dado pessoal é vendido, alugado ou compartilhado com terceiros para fins comerciais.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">5</span> Compartilhamento de Dados</h2>
+    <p>Os dados são compartilhados apenas com:</p>
+    <ul>
+      <li>
+        <strong>IXC Soft (sistema de gestão do provedor):</strong> para autenticação e consulta
+        de dados contratuais. As informações trafegam de forma segura entre o aplicativo e o
+        sistema do provedor.
+      </li>
+      <li>
+        <strong>Expo / Google Firebase / Apple APNs:</strong> para entrega de notificações push.
+        Apenas o token anônimo do dispositivo é compartilhado com esses serviços.
+      </li>
+    </ul>
+    <p>Não há compartilhamento com parceiros de publicidade ou análise de dados.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">6</span> Retenção de Dados</h2>
+    <p>
+      Os tokens de notificação push são mantidos enquanto o cliente utilizar o aplicativo.
+      Ao desinstalar o aplicativo, o token deixa de ser válido automaticamente.
+    </p>
+    <p>
+      As credenciais armazenadas localmente no dispositivo são apagadas ao realizar logout
+      ou ao desinstalar o aplicativo.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">7</span> Seus Direitos (LGPD)</h2>
+    <p>Conforme a Lei Geral de Proteção de Dados, você tem direito a:</p>
+    <ul>
+      <li>Confirmar a existência de tratamento dos seus dados.</li>
+      <li>Acessar os dados que possuímos sobre você.</li>
+      <li>Solicitar a correção de dados incompletos ou incorretos.</li>
+      <li>Solicitar a exclusão dos seus dados de notificação push.</li>
+      <li>Revogar o consentimento para recebimento de notificações (nas configurações do dispositivo).</li>
+    </ul>
+    <p>
+      Para exercer esses direitos, entre em contato pelo e-mail ou WhatsApp indicados abaixo.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">8</span> Contato</h2>
+    <p>
+      Em caso de dúvidas sobre esta política ou sobre o tratamento dos seus dados,
+      entre em contato com a UaiFibra Telecom:
+    </p>
+    <ul>
+      <li><strong>WhatsApp:</strong> disponível no aplicativo, na seção "Suporte".</li>
+      <li><strong>Atendimento presencial:</strong> nas unidades da UaiFibra Telecom.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">9</span> Alterações nesta Política</h2>
+    <p>
+      Esta política pode ser atualizada periodicamente. Alterações significativas serão
+      comunicadas via notificação push ou aviso dentro do aplicativo.
+      A data de "última atualização" no topo desta página sempre refletirá a versão vigente.
+    </p>
+  </section>
+</main>
+
+<footer>
+  &copy; 2026 UaiFibra Telecom. Todos os direitos reservados.
+</footer>
+
+</body>
+</html>
