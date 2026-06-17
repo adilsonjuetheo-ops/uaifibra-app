@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import {
   login as loginService,
   logout as logoutService,
+  persistirSessao,
   restaurarSessao,
   SessaoCliente,
 } from '@/services/auth';
@@ -13,7 +14,7 @@ interface AuthState {
   hidratar: () => Promise<void>;
   login: (cpf: string, senha: string) => Promise<void>;
   logout: () => Promise<void>;
-  atualizarCliente: (changes: Partial<SessaoCliente>) => void;
+  atualizarCliente: (changes: Partial<SessaoCliente>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -35,8 +36,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ cliente: null });
   },
 
-  atualizarCliente: (changes) => {
+  atualizarCliente: async (changes) => {
     const { cliente } = get();
-    if (cliente) set({ cliente: { ...cliente, ...changes } });
+    if (!cliente) return;
+    const atualizado = { ...cliente, ...changes };
+    set({ cliente: atualizado });
+    await persistirSessao(atualizado);
   },
 }));

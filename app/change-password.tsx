@@ -32,14 +32,6 @@ export default function ChangePasswordScreen() {
   const [confirmar, setConfirmar] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const [aguardandoRedir, setAguardandoRedir] = useState(false);
-
-  // Navega para Home só depois que o React confirmou senhaPadrao: false no store
-  useEffect(() => {
-    if (aguardandoRedir && !cliente?.senhaPadrao) {
-      router.replace('/');
-    }
-  }, [aguardandoRedir, cliente?.senhaPadrao, router]);
 
   const salvar = async () => {
     setErro(null);
@@ -58,8 +50,8 @@ export default function ChangePasswordScreen() {
       await trocarSenha(cliente.id, primeiroAcesso ? null : senhaAtual, novaSenha);
       showToast('Senha criada com sucesso! Bem-vindo 👋', 'success');
       if (primeiroAcesso) {
-        atualizarCliente({ senhaPadrao: false });
-        setAguardandoRedir(true);
+        await atualizarCliente({ senhaPadrao: false });
+        router.replace('/');
       } else {
         router.back();
       }

@@ -116,6 +116,10 @@ export async function restaurarSessao(): Promise<SessaoCliente | null> {
   }
 }
 
+export async function persistirSessao(sessao: SessaoCliente): Promise<void> {
+  await SecureStore.setItemAsync(KEY_CLIENTE, JSON.stringify(sessao));
+}
+
 export async function logout(): Promise<void> {
   await SecureStore.deleteItemAsync(KEY_CPF);
   await SecureStore.deleteItemAsync(KEY_SENHA);
@@ -146,7 +150,14 @@ export async function trocarSenha(
   }
 
   if (!isDemoCliente(idCliente)) {
-    await atualizarCliente(idCliente, { senha: novaSenha });
+    try {
+      await atualizarCliente(idCliente, { senha: novaSenha });
+    } catch (err) {
+      console.warn('[trocarSenha] falha ao atualizar senha no IXC:', err);
+      throw new Error(
+        'Não foi possível salvar a nova senha no servidor. Tente novamente ou fale com o suporte.'
+      );
+    }
   }
   await SecureStore.setItemAsync(KEY_SENHA, novaSenha);
 
