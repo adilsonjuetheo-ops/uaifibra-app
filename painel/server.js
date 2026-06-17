@@ -1,48 +1,53 @@
 'use strict';
 
 const express = require('express');
-const Database = require('better-sqlite3');
+const { neon } = require('@neondatabase/serverless');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const PORT = process.env.PORT || 3000;
+const PORT       = process.env.PORT       || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'uaifibra2024';
 
-// ─── Database ─────────────────────────────────────────────────────────────────
+if (!process.env.DATABASE_URL) {
+  console.error('ERRO: variável DATABASE_URL não definida.');
+  process.exit(1);
+}
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const sql = neon(process.env.DATABASE_URL);
 
-const db = new Database(path.join(DATA_DIR, 'painel.db'));
+// ─── Schema ───────────────────────────────────────────────────────────────────
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS avisos (
-    id          TEXT PRIMARY KEY,
-    tipo        TEXT NOT NULL DEFAULT 'info',
-    titulo      TEXT NOT NULL,
-    mensagem    TEXT NOT NULL,
-    cidades     TEXT DEFAULT '',
-    exibir_de   TEXT DEFAULT '',
-    exibir_ate  TEXT DEFAULT '',
-    enviado_push INTEGER DEFAULT 0,
-    criado_em   TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS push_tokens (
-    token          TEXT PRIMARY KEY,
-    id_cliente     TEXT,
-    cidade         TEXT,
-    registrado_em  TEXT NOT NULL
-  );
-`);
+async function criarTabelas() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS avisos (
+      id           TEXT PRIMARY KEY,
+      tipo         TEXT NOT NULL DEFAULT 'info',
+      titulo       TEXT NOT NULL,
+      mensagem     TEXT NOT NULL,
+      cidades      TEXT DEFAULT '',
+      exibir_de    TEXT DEFAULT '',
+      exibir_ate   TEXT DEFAULT '',
+      enviado_push INTEGER DEFAULT 0,
+      criado_em    TEXT NOT NULL
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      token         TEXT PRIMARY KEY,
+      id_cliente    TEXT,
+      cidade        TEXT,
+      registrado_em TEXT NOT NULL
+    )
+  `;
+  console.log('  Tabelas verificadas/criadas no Neon.');
+}
 
 // ─── Express ──────────────────────────────────────────────────────────────────
 
@@ -65,23 +70,23 @@ function autenticar(req, res, next) {
 
 function avisoDB_para_json(a) {
   return {
-    id: a.id,
-    tipo: a.tipo,
-    titulo: a.titulo,
-    mensagem: a.mensagem,
-    cidades: a.cidades
+    id:          a.id,
+    tipo:        a.tipo,
+    titulo:      a.titulo,
+    mensagem:    a.mensagem,
+    cidades:     a.cidades
       ? a.cidades.split(',').map((c) => c.trim()).filter(Boolean)
       : [],
-    exibirDe: a.exibir_de || undefined,
-    exibirAte: a.exibir_ate || undefined,
+    exibirDe:    a.exibir_de  || undefined,
+    exibirAte:   a.exibir_ate || undefined,
     enviadoPush: !!a.enviado_push,
-    criadoEm: a.criado_em,
+    criadoEm:    a.criado_em,
   };
 }
 
 async function enviarPushParaTodos(titulo, mensagem, cidadesFiltro) {
   try {
-    const tokens = db.prepare('SELECT token, cidade FROM push_tokens').all();
+    const tokens = await sql`SELECT token, cidade FROM push_tokens`;
 
     const cidades = (cidadesFiltro || '')
       .split(',')
@@ -97,23 +102,22 @@ async function enviarPushParaTodos(titulo, mensagem, cidadesFiltro) {
 
     if (destinos.length === 0) return 0;
 
-    // Expo Push API accepts up to 100 per batch
     let enviados = 0;
     for (let i = 0; i < destinos.length; i += 100) {
       const lote = destinos.slice(i, i + 100).map((token) => ({
-        to: token,
-        title: titulo,
-        body: mensagem,
-        data: { rota: '/avisos' },
-        sound: 'notification.wav',
-        priority: 'high',
+        to:        token,
+        title:     titulo,
+        body:      mensagem,
+        data:      { rota: '/avisos' },
+        sound:     'notification.wav',
+        priority:  'high',
         channelId: 'avisos',
       }));
       const resp = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
+        method:  'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          'Content-Type':    'application/json',
+          Accept:            'application/json',
           'Accept-Encoding': 'gzip, deflate',
         },
         body: JSON.stringify(lote),
@@ -127,29 +131,35 @@ async function enviarPushParaTodos(titulo, mensagem, cidadesFiltro) {
   }
 }
 
-// ─── Public routes (used by the mobile app) ───────────────────────────────────
+// ─── Public routes ────────────────────────────────────────────────────────────
 
-// Announcements feed – mobile app polls this endpoint
-app.get('/avisos.json', (_req, res) => {
-  const avisos = db.prepare('SELECT * FROM avisos ORDER BY criado_em DESC').all();
-  res.json(avisos.map(avisoDB_para_json));
+app.get('/avisos.json', async (_req, res) => {
+  try {
+    const avisos = await sql`SELECT * FROM avisos ORDER BY criado_em DESC`;
+    res.json(avisos.map(avisoDB_para_json));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
 });
 
-// Register a push token from a device
-app.post('/api/push/register', (req, res) => {
+app.post('/api/push/register', async (req, res) => {
   const { token, idCliente, cidade } = req.body ?? {};
   if (!token) return res.status(400).json({ erro: 'token obrigatório' });
-
-  db.prepare(`
-    INSERT INTO push_tokens (token, id_cliente, cidade, registrado_em)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(token) DO UPDATE
-      SET id_cliente = excluded.id_cliente,
-          cidade     = excluded.cidade,
-          registrado_em = excluded.registrado_em
-  `).run(token, idCliente ?? null, cidade ?? null, new Date().toISOString());
-
-  res.json({ ok: true });
+  try {
+    await sql`
+      INSERT INTO push_tokens (token, id_cliente, cidade, registrado_em)
+      VALUES (${token}, ${idCliente ?? null}, ${cidade ?? null}, ${new Date().toISOString()})
+      ON CONFLICT (token) DO UPDATE
+        SET id_cliente    = EXCLUDED.id_cliente,
+            cidade        = EXCLUDED.cidade,
+            registrado_em = EXCLUDED.registrado_em
+    `;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao registrar token' });
+  }
 });
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -163,22 +173,32 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ token, usuario });
 });
 
-// ─── Admin routes (require Bearer token) ─────────────────────────────────────
+// ─── Admin routes ─────────────────────────────────────────────────────────────
 
-app.get('/api/admin/stats', autenticar, (req, res) => {
-  const dispositivos = db.prepare('SELECT COUNT(*) AS c FROM push_tokens').get().c;
-  const hoje = new Date().toISOString().slice(0, 10);
-  const avisosAtivos = db.prepare(`
-    SELECT COUNT(*) AS c FROM avisos
-    WHERE (exibir_de  = '' OR exibir_de  <= ?)
-      AND (exibir_ate = '' OR exibir_ate >= ?)
-  `).get(hoje, hoje).c;
-  res.json({ dispositivos, avisosAtivos });
+app.get('/api/admin/stats', autenticar, async (_req, res) => {
+  try {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const [{ c: dispositivos }] = await sql`SELECT COUNT(*) AS c FROM push_tokens`;
+    const [{ c: avisosAtivos }] = await sql`
+      SELECT COUNT(*) AS c FROM avisos
+      WHERE (exibir_de  = '' OR exibir_de  <= ${hoje})
+        AND (exibir_ate = '' OR exibir_ate >= ${hoje})
+    `;
+    res.json({ dispositivos, avisosAtivos });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao buscar stats' });
+  }
 });
 
-app.get('/api/admin/avisos', autenticar, (req, res) => {
-  const avisos = db.prepare('SELECT * FROM avisos ORDER BY criado_em DESC').all();
-  res.json(avisos.map(avisoDB_para_json));
+app.get('/api/admin/avisos', autenticar, async (_req, res) => {
+  try {
+    const avisos = await sql`SELECT * FROM avisos ORDER BY criado_em DESC`;
+    res.json(avisos.map(avisoDB_para_json));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao buscar avisos' });
+  }
 });
 
 app.post('/api/admin/avisos', autenticar, async (req, res) => {
@@ -186,75 +206,98 @@ app.post('/api/admin/avisos', autenticar, async (req, res) => {
   if (!titulo || !mensagem) {
     return res.status(400).json({ erro: 'Título e mensagem são obrigatórios' });
   }
+  try {
+    const id = crypto.randomUUID();
+    const cidadesStr = Array.isArray(cidades) ? cidades.join(', ') : (cidades || '');
 
-  const id = crypto.randomUUID();
-  const cidadesStr = Array.isArray(cidades)
-    ? cidades.join(', ')
-    : (cidades || '');
+    await sql`
+      INSERT INTO avisos (id, tipo, titulo, mensagem, cidades, exibir_de, exibir_ate, enviado_push, criado_em)
+      VALUES (
+        ${id}, ${tipo || 'info'}, ${titulo}, ${mensagem},
+        ${cidadesStr}, ${exibirDe || ''}, ${exibirAte || ''}, 0, ${new Date().toISOString()}
+      )
+    `;
 
-  db.prepare(`
-    INSERT INTO avisos (id, tipo, titulo, mensagem, cidades, exibir_de, exibir_ate, enviado_push, criado_em)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(
-    id,
-    tipo || 'info',
-    titulo,
-    mensagem,
-    cidadesStr,
-    exibirDe || '',
-    exibirAte || '',
-    new Date().toISOString(),
-  );
-
-  let pushEnviados = 0;
-  if (enviarPush) {
-    pushEnviados = await enviarPushParaTodos(titulo, mensagem, cidadesStr);
-    if (pushEnviados > 0) {
-      db.prepare('UPDATE avisos SET enviado_push = 1 WHERE id = ?').run(id);
+    let pushEnviados = 0;
+    if (enviarPush) {
+      pushEnviados = await enviarPushParaTodos(titulo, mensagem, cidadesStr);
+      if (pushEnviados > 0) {
+        await sql`UPDATE avisos SET enviado_push = 1 WHERE id = ${id}`;
+      }
     }
+
+    res.json({ ok: true, id, pushEnviados });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao publicar aviso' });
   }
-
-  res.json({ ok: true, id, pushEnviados });
 });
 
-app.put('/api/admin/avisos/:id', autenticar, (req, res) => {
+app.put('/api/admin/avisos/:id', autenticar, async (req, res) => {
   const { tipo, titulo, mensagem, cidades, exibirDe, exibirAte } = req.body ?? {};
-  const cidadesStr = Array.isArray(cidades)
-    ? cidades.join(', ')
-    : (cidades || '');
-
-  const info = db.prepare(`
-    UPDATE avisos
-    SET tipo=?, titulo=?, mensagem=?, cidades=?, exibir_de=?, exibir_ate=?
-    WHERE id=?
-  `).run(tipo || 'info', titulo, mensagem, cidadesStr, exibirDe || '', exibirAte || '', req.params.id);
-
-  if (info.changes === 0) return res.status(404).json({ erro: 'Aviso não encontrado' });
-  res.json({ ok: true });
+  const cidadesStr = Array.isArray(cidades) ? cidades.join(', ') : (cidades || '');
+  try {
+    const rows = await sql`
+      UPDATE avisos
+      SET tipo       = ${tipo || 'info'},
+          titulo     = ${titulo},
+          mensagem   = ${mensagem},
+          cidades    = ${cidadesStr},
+          exibir_de  = ${exibirDe  || ''},
+          exibir_ate = ${exibirAte || ''}
+      WHERE id = ${req.params.id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ erro: 'Aviso não encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao atualizar aviso' });
+  }
 });
 
-app.delete('/api/admin/avisos/:id', autenticar, (req, res) => {
-  db.prepare('DELETE FROM avisos WHERE id = ?').run(req.params.id);
-  res.json({ ok: true });
+app.delete('/api/admin/avisos/:id', autenticar, async (req, res) => {
+  try {
+    await sql`DELETE FROM avisos WHERE id = ${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao excluir aviso' });
+  }
 });
 
-app.get('/api/admin/tokens', autenticar, (req, res) => {
-  const tokens = db
-    .prepare('SELECT * FROM push_tokens ORDER BY registrado_em DESC')
-    .all();
-  res.json(tokens);
+app.get('/api/admin/tokens', autenticar, async (_req, res) => {
+  try {
+    const tokens = await sql`SELECT * FROM push_tokens ORDER BY registrado_em DESC`;
+    res.json(tokens);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao buscar tokens' });
+  }
 });
 
 app.post('/api/admin/push/enviar', autenticar, async (req, res) => {
   const { titulo, mensagem, cidades } = req.body ?? {};
   if (!titulo || !mensagem) return res.status(400).json({ erro: 'Título e mensagem obrigatórios' });
-  const enviados = await enviarPushParaTodos(titulo, mensagem, cidades || '');
-  res.json({ ok: true, enviados });
+  try {
+    const enviados = await enviarPushParaTodos(titulo, mensagem, cidades || '');
+    res.json({ ok: true, enviados });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao enviar push' });
+  }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`\n  UaiFibra Painel  →  http://localhost:${PORT}`);
-  console.log(`  Admin: ${ADMIN_USER} / ${ADMIN_PASS}\n`);
-});
+criarTabelas()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`\n  UaiFibra Painel  →  http://localhost:${PORT}`);
+      console.log(`  Admin: ${ADMIN_USER} / ${ADMIN_PASS}\n`);
+    });
+  })
+  .catch((err) => {
+    console.error('Falha ao inicializar banco de dados:', err);
+    process.exit(1);
+  });
