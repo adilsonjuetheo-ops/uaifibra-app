@@ -44,10 +44,10 @@ export default function RootLayout() {
     void hidratarBiometria();
   }, [hidratar, hidratarNotificacoes, hidratarBiometria]);
 
-  // Re-registra o token push a cada abertura do app enquanto logado.
-  // Garante que reinicializações do servidor não percam os tokens.
+  // Registra/atualiza o token push sempre que o estado de login mudar.
+  // Garante cobertura mesmo sem login (idCliente=null) e após logout.
   useEffect(() => {
-    if (cliente) void configurarNotificacoes();
+    void configurarNotificacoes();
   }, [cliente]);
 
   useEffect(() => {
