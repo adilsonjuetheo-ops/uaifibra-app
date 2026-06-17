@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383585218505",
+    "project_id": "uai-fibra",
+    "storage_bucket": "uai-fibra.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383585218505:android:9a7ed1c4e6f361ddbbc218",
+        "android_client_info": {
+          "package_name": "com.uaifibra.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIV3yMfxvQBuymXH-m1uAEEdWUPYDTdnk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
